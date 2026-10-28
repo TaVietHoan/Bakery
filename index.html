@@ -2,987 +2,597 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>PETIT FOUR — Tiệm Bánh Artisan 3D Tương Tác</title>
-  <meta name="description" content="Trải nghiệm không gian tiệm bánh 3D phong cách Pháp - Nhật thanh lịch. Dạo bước trong cửa hàng, ngắm nhìn từng chiếc bánh thủ công và đặt bánh trực tiếp.">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>PETIT FOUR — Tiệm bánh Artisan, xoay 360° trước khi đặt</title>
+  <meta name="description" content="Xoay từng chiếc bánh thủ công trong không gian 3D rồi đặt ngay: giao tận nơi, đặt qua beFood, GrabFood, ShopeeFood, Xanh SM hoặc đến lấy tại tiệm.">
+  <meta name="theme-color" content="#2B1B2E">
+  <meta property="og:title" content="PETIT FOUR — Tiệm bánh Artisan">
+  <meta property="og:description" content="Xoay 360° từng chiếc bánh thủ công và đặt hàng trực tuyến.">
+  <meta property="og:type" content="website">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+
   <style>
     :root {
-      --bg-cream: #F7F1E8;
-      --bg-cream-alpha: rgba(247, 241, 232, 0.94);
-      --choco-dark: #4A2E25;
-      --choco-deep: #2A1711;
-      --caramel: #B98252;
-      --caramel-light: #D9A066;
-      --pastel-pink: #E8C9C0;
-      --sage-green: #9EAA91;
-      --pure-white: #FFFFFF;
-      --shadow-soft: 0 16px 36px rgba(74, 46, 37, 0.12);
-      --shadow-elevated: 0 24px 60px rgba(42, 23, 17, 0.22);
-      --transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-      --radius-sm: 8px;
-      --radius-md: 14px;
-      --radius-lg: 24px;
+      --paper: #FBF7F7;
+      --paper-2: #F3ECEE;
+      --ink: #2B1B2E;
+      --ink-soft: #6A5870;
+      --berry: #C2255C;
+      --berry-dark: #9E1B4A;
+      --pistachio: #CFE0B8;
+      --tint: #F6DCE2;
+      --line: rgba(43, 27, 46, 0.14);
+      --font-display: 'Bricolage Grotesque', 'Be Vietnam Pro', system-ui, sans-serif;
+      --font-body: 'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', sans-serif;
+      --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+      --header-h: 64px;
     }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      -webkit-tap-highlight-color: transparent;
-      user-select: none;
-    }
-
-    body, html {
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background-color: var(--choco-deep);
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      color: var(--choco-dark);
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; scroll-padding-top: calc(var(--header-h) + 8px); -webkit-text-size-adjust: 100%; }
+    body {
+      font-family: var(--font-body);
       font-size: 15px;
-    }
-
-    /* 3D Canvas */
-    #webgl-canvas {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 1;
-      display: block;
-      outline: none;
-    }
-
-    /* Reticle / Crosshair */
-    #crosshair {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.65);
-      border: 1.5px solid rgba(74, 46, 37, 0.4);
-      pointer-events: none;
-      z-index: 10;
-      transition: transform 0.2s ease, background 0.2s ease;
-    }
-    #crosshair.active {
-      transform: translate(-50%, -50%) scale(2.2);
-      background: var(--caramel);
-      border-color: #fff;
-    }
-
-    /* Interaction Prompt */
-    #interaction-prompt {
-      position: fixed;
-      top: calc(50% + 24px);
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(42, 23, 17, 0.85);
-      backdrop-filter: blur(8px);
-      color: #fff;
-      padding: 8px 16px;
-      border-radius: 30px;
-      font-size: 13px;
-      letter-spacing: 0.5px;
-      pointer-events: none;
-      z-index: 10;
-      display: none;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.25);
-      border: 1px solid rgba(255,255,255,0.15);
-      animation: fadeIn 0.2s ease-out;
-    }
-
-    /* HUD Bar */
-    .hud-header {
-      position: fixed;
-      top: 20px;
-      left: 24px;
-      right: 24px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      z-index: 20;
-      pointer-events: none;
-    }
-    .hud-header * {
-      pointer-events: auto;
-    }
-    .brand-badge {
-      background: var(--bg-cream-alpha);
-      backdrop-filter: blur(12px);
-      padding: 10px 20px;
-      border-radius: 40px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      box-shadow: var(--shadow-soft);
-      border: 1px solid rgba(255, 255, 255, 0.6);
-    }
-    .brand-title {
-      font-family: 'Playfair Display', serif;
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--choco-dark);
-      letter-spacing: 1px;
-    }
-    .brand-tag {
-      font-size: 11px;
-      background: var(--caramel);
-      color: #fff;
-      padding: 3px 8px;
-      border-radius: 20px;
-      text-transform: uppercase;
-      font-weight: 600;
-      letter-spacing: 0.5px;
-    }
-    .hud-actions {
-      display: flex;
-      gap: 12px;
-    }
-    .hud-btn {
-      background: var(--bg-cream-alpha);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.6);
-      color: var(--choco-dark);
-      padding: 10px 18px;
-      border-radius: 30px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      box-shadow: var(--shadow-soft);
-      transition: var(--transition);
-    }
-    .hud-btn:hover {
-      background: #fff;
-      transform: translateY(-2px);
-      color: var(--caramel);
-    }
-    .badge-count {
-      background: var(--caramel);
-      color: #fff;
-      font-size: 11px;
-      min-width: 20px;
-      height: 20px;
-      border-radius: 10px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0 6px;
-    }
-
-    /* HUD Helper Footer */
-    .hud-footer {
-      position: fixed;
-      bottom: 24px;
-      left: 24px;
-      z-index: 20;
-      display: flex;
-      gap: 12px;
-      pointer-events: none;
-    }
-    .control-hint {
-      background: rgba(42, 23, 17, 0.75);
-      backdrop-filter: blur(8px);
-      color: #EDE4D8;
-      padding: 8px 16px;
-      border-radius: 20px;
-      font-size: 12px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .key-badge {
-      background: rgba(255, 255, 255, 0.2);
-      padding: 2px 6px;
-      border-radius: 4px;
-      color: #fff;
-      font-weight: 700;
-      font-family: monospace;
-    }
-
-    /* Onscreen Joystick for Mobile */
-    #mobile-controls {
-      position: fixed;
-      bottom: 24px;
-      left: 24px;
-      right: 24px;
-      z-index: 25;
-      display: none;
-      justify-content: space-between;
-      align-items: flex-end;
-      pointer-events: none;
-    }
-    .joystick-zone {
-      width: 120px;
-      height: 120px;
-      background: rgba(255, 255, 255, 0.2);
-      border: 2px solid rgba(255, 255, 255, 0.4);
-      border-radius: 50%;
-      position: relative;
-      pointer-events: auto;
-      touch-action: none;
-    }
-    .joystick-knob {
-      width: 50px;
-      height: 50px;
-      background: var(--bg-cream);
-      border-radius: 50%;
-      position: absolute;
-      top: 35px;
-      left: 35px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-      pointer-events: none;
-    }
-    .mobile-actions {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      pointer-events: auto;
-    }
-    .mobile-action-btn {
-      width: 56px;
-      height: 56px;
-      border-radius: 50%;
-      background: var(--caramel);
-      color: #fff;
-      border: none;
-      font-size: 14px;
-      font-weight: 700;
-      box-shadow: var(--shadow-soft);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    /* Modals & Overlays */
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(42, 23, 17, 0.65);
-      backdrop-filter: blur(10px);
-      z-index: 100;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.3s ease;
-    }
-    .modal-overlay.open {
-      opacity: 1;
-      pointer-events: auto;
-    }
-    .modal-card {
-      background: var(--bg-cream);
-      border-radius: var(--radius-lg);
-      max-width: 680px;
-      width: 100%;
-      max-height: 90vh;
-      overflow-y: auto;
-      box-shadow: var(--shadow-elevated);
-      position: relative;
-      transform: translateY(20px);
-      transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-      border: 1px solid rgba(255, 255, 255, 0.8);
-      user-select: text;
-    }
-    .modal-overlay.open .modal-card {
-      transform: translateY(0);
-    }
-    .modal-close {
-      position: absolute;
-      top: 18px;
-      right: 18px;
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      background: rgba(74, 46, 37, 0.08);
-      border: none;
-      font-size: 20px;
-      color: var(--choco-dark);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: var(--transition);
-      z-index: 10;
-    }
-    .modal-close:hover {
-      background: rgba(74, 46, 37, 0.18);
-    }
-
-    /* Product Showcase Card */
-    .product-modal-content {
-      display: grid;
-      grid-template-columns: 1fr 1.1fr;
-    }
-    .product-modal-img {
-      position: relative;
-      background: #E8DCCF;
-      min-height: 340px;
-      overflow: hidden;
-    }
-    .product-modal-img img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-    .product-modal-info {
-      padding: 32px 28px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-    }
-    .prod-category-badge {
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--caramel);
-      font-weight: 700;
-      margin-bottom: 6px;
-    }
-    .prod-title {
-      font-family: 'Playfair Display', serif;
-      font-size: 24px;
-      font-weight: 700;
-      color: var(--choco-dark);
-      margin-bottom: 8px;
-      line-height: 1.3;
-    }
-    .prod-price {
-      font-size: 22px;
-      font-weight: 700;
-      color: var(--caramel);
-      margin-bottom: 16px;
-    }
-    .prod-desc {
-      color: #6B554D;
-      font-size: 14px;
       line-height: 1.6;
-      margin-bottom: 16px;
+      color: var(--ink);
+      background: var(--paper);
+      -webkit-tap-highlight-color: transparent;
     }
-    .prod-meta-box {
-      background: rgba(255, 255, 255, 0.65);
-      border-radius: var(--radius-sm);
-      padding: 12px;
-      margin-bottom: 20px;
-      font-size: 12.5px;
-      color: #553D35;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
+    body.modal-open { overflow: hidden; }
+    img { display: block; max-width: 100%; }
+    button { font: inherit; color: inherit; cursor: pointer; border: none; background: none; }
+    a { color: inherit; text-decoration: none; }
+    :focus-visible { outline: 3px solid var(--berry); outline-offset: 3px; border-radius: 6px; }
+    .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    svg.ic { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+    /* ---------- Header ---------- */
+    .site-header {
+      position: fixed; inset: 0 0 auto 0; height: var(--header-h); z-index: 50;
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      padding: 0 max(20px, env(safe-area-inset-right)) 0 max(20px, env(safe-area-inset-left));
+      background: rgba(251, 247, 247, 0.82);
+      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+      transition: box-shadow 0.3s;
     }
-    .qty-control {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 20px;
+    .site-header.scrolled { box-shadow: 0 1px 0 var(--line); }
+    .logo { font-family: var(--font-display); font-weight: 800; font-size: 22px; letter-spacing: 0.02em; display: flex; align-items: baseline; gap: 10px; }
+    .logo small { font-family: var(--font-body); font-size: 12px; font-weight: 500; color: var(--ink-soft); letter-spacing: 0; display: none; }
+    .nav { display: none; gap: 28px; font-weight: 600; font-size: 14px; }
+    .nav a { padding: 6px 0; border-bottom: 2px solid transparent; transition: border-color 0.2s; }
+    .nav a:hover { border-color: var(--berry); }
+    .header-actions { display: flex; gap: 8px; align-items: center; }
+    .icon-btn {
+      position: relative; width: 44px; height: 44px; border-radius: 50%;
+      display: inline-flex; align-items: center; justify-content: center;
+      background: var(--paper-2); transition: background 0.2s;
     }
-    .qty-btn {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      border: 1px solid var(--caramel);
-      background: #fff;
-      color: var(--caramel);
-      font-size: 16px;
-      font-weight: bold;
-      cursor: pointer;
+    .icon-btn:hover { background: var(--pistachio); }
+    .cart-btn { width: auto; padding: 0 16px 0 14px; gap: 8px; border-radius: 24px; background: var(--ink); color: #fff; font-weight: 600; font-size: 14px; }
+    .cart-btn:hover { background: var(--berry); }
+    .badge-count {
+      min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px;
+      background: #fff; color: var(--ink); font-size: 12px; font-weight: 700;
+      display: inline-flex; align-items: center; justify-content: center;
     }
-    .qty-val {
-      font-size: 16px;
-      font-weight: 700;
-      min-width: 24px;
-      text-align: center;
+    .snd-off, .snd-on { display: none; }
+    #btn-toggle-sound[aria-pressed="false"] .snd-off { display: block; }
+    #btn-toggle-sound[aria-pressed="true"] .snd-on { display: block; }
+
+    /* ---------- Hero (3D showroom) ---------- */
+    .hero {
+      display: grid; padding-top: var(--header-h);
+      grid-template-columns: 1fr;
+      grid-template-areas: "stage" "panel" "rail";
     }
+    .stage {
+      grid-area: stage; position: relative; overflow: hidden;
+      height: min(58svh, 520px); min-height: 330px;
+      background-color: var(--tint); transition: background-color 0.7s ease;
+    }
+    .stage::before {
+      content: ''; position: absolute; inset: 0; pointer-events: none;
+      background: radial-gradient(58% 52% at 50% 60%, rgba(255,255,255,0.9), rgba(255,255,255,0) 72%);
+    }
+    .stage-ghost {
+      position: absolute; left: 0; right: 0; top: 6%; z-index: 0;
+      text-align: center; padding: 0 12px; pointer-events: none;
+      font-family: var(--font-display); font-weight: 800; line-height: 0.92;
+      font-size: clamp(56px, 15vw, 190px); color: rgba(255, 255, 255, 0.62);
+      letter-spacing: -0.02em; transition: opacity 0.3s;
+    }
+    .stage-ghost.swap { opacity: 0; }
+    #stage-canvas {
+      position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1;
+      touch-action: pan-y; cursor: grab; display: block; outline: none;
+    }
+    #stage-canvas.grabbing { cursor: grabbing; }
+    .stage-fallback { position: absolute; inset: 14% 18%; z-index: 1; display: none; }
+    .stage-fallback img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; box-shadow: 0 24px 50px rgba(43,27,46,0.25); }
+    .stage.no-webgl .stage-fallback { display: block; }
+    .stage.no-webgl #stage-canvas, .stage.no-webgl .stage-tools { display: none; }
+    .stage-hint {
+      position: absolute; left: 16px; bottom: 14px; z-index: 2;
+      display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px;
+      background: rgba(43, 27, 46, 0.78); color: #fff; border-radius: 20px; font-size: 12.5px;
+      pointer-events: none; transition: opacity 0.5s;
+    }
+    .stage-hint.gone { opacity: 0; }
+    .stage-tools { position: absolute; right: 14px; bottom: 12px; z-index: 2; display: flex; gap: 8px; }
+    .stage-tools .icon-btn { background: rgba(255,255,255,0.85); width: 40px; height: 40px; }
+    .stage-tools .icon-btn:hover { background: #fff; }
+    .stage-arrow { position: absolute; top: 50%; transform: translateY(-50%); z-index: 2; background: rgba(255,255,255,0.85); }
+    .stage-arrow:hover { background: #fff; }
+    .stage-arrow.prev { left: 12px; }
+    .stage-arrow.next { right: 12px; }
+
+    .panel { grid-area: panel; padding: 26px 20px 8px; display: flex; flex-direction: column; justify-content: center; }
+    .p-cat { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--ink-soft); margin-bottom: 10px; }
+    .p-cat::before { content: ''; width: 10px; height: 10px; border-radius: 50%; background: var(--pistachio); box-shadow: 0 0 0 2px var(--ink-soft) inset; }
+    .p-name { font-family: var(--font-display); font-weight: 800; font-size: clamp(30px, 4.2vw, 50px); line-height: 1.04; letter-spacing: -0.015em; margin-bottom: 10px; }
+    .p-price { font-family: var(--font-display); font-weight: 700; font-size: 26px; color: var(--berry); margin-bottom: 12px; }
+    .p-desc { color: var(--ink-soft); max-width: 46ch; margin-bottom: 18px; }
+    .p-meta { display: grid; grid-template-columns: auto 1fr; gap: 0 18px; margin-bottom: 20px; max-width: 520px; font-size: 13.5px; }
+    .p-meta dt { font-weight: 600; padding: 8px 0; border-top: 1px solid var(--line); }
+    .p-meta dd { padding: 8px 0; border-top: 1px solid var(--line); color: var(--ink-soft); }
+    .buy-row { display: flex; gap: 12px; align-items: stretch; flex-wrap: wrap; }
+    .qty { display: inline-flex; align-items: center; border: 1.5px solid var(--ink); border-radius: 30px; padding: 3px; }
+    .qty button { width: 40px; height: 40px; border-radius: 50%; font-size: 20px; font-weight: 600; transition: background 0.2s; }
+    .qty button:hover { background: var(--paper-2); }
+    .qty span { min-width: 30px; text-align: center; font-weight: 700; font-size: 16px; }
     .btn-primary {
-      background: var(--choco-dark);
-      color: #fff;
-      border: none;
-      padding: 14px 24px;
-      border-radius: 30px;
-      font-weight: 600;
-      font-size: 15px;
-      cursor: pointer;
-      transition: var(--transition);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      width: 100%;
+      display: inline-flex; align-items: center; justify-content: center; gap: 12px;
+      background: var(--berry); color: #fff; font-weight: 700; font-size: 15px;
+      padding: 0 26px; min-height: 52px; border-radius: 30px; flex: 1 1 220px;
+      transition: background 0.2s, transform 0.2s var(--ease);
     }
-    .btn-primary:hover {
-      background: var(--caramel);
-      transform: translateY(-2px);
+    .btn-primary:hover { background: var(--berry-dark); transform: translateY(-2px); }
+    .btn-primary:disabled { opacity: 0.6; cursor: wait; transform: none; }
+    .btn-ghost {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      min-height: 52px; padding: 0 22px; border-radius: 30px; border: 1.5px solid var(--ink);
+      font-weight: 600; transition: background 0.2s, color 0.2s;
     }
+    .btn-ghost:hover { background: var(--ink); color: #fff; }
+    .p-links { margin-top: 14px; font-size: 13.5px; color: var(--ink-soft); }
+    .p-links a { color: var(--berry); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
 
-    /* Menu & Catalog Modal */
-    .catalog-modal-content {
-      padding: 32px;
-    }
-    .catalog-header {
-      text-align: center;
-      margin-bottom: 24px;
-    }
-    .catalog-header h2 {
-      font-family: 'Playfair Display', serif;
-      font-size: 28px;
-      color: var(--choco-dark);
-    }
-    .cat-tabs {
-      display: flex;
-      justify-content: center;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-bottom: 24px;
-    }
-    .cat-tab-btn {
-      background: rgba(255,255,255,0.7);
-      border: 1px solid rgba(74, 46, 37, 0.15);
-      padding: 8px 18px;
-      border-radius: 20px;
-      cursor: pointer;
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--choco-dark);
-      transition: var(--transition);
-    }
-    .cat-tab-btn.active, .cat-tab-btn:hover {
-      background: var(--choco-dark);
-      color: #fff;
-      border-color: var(--choco-dark);
-    }
-    .catalog-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-      gap: 20px;
-      max-height: 55vh;
-      overflow-y: auto;
-      padding-right: 6px;
-    }
-    .catalog-card {
-      background: #fff;
-      border-radius: var(--radius-md);
-      overflow: hidden;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-      border: 1px solid rgba(0,0,0,0.05);
-      display: flex;
-      flex-direction: column;
-      cursor: pointer;
-      transition: var(--transition);
-    }
-    .catalog-card:hover {
-      transform: translateY(-4px);
-      box-shadow: var(--shadow-soft);
-    }
-    .catalog-card-img {
-      height: 140px;
-      overflow: hidden;
-      background: #EDE4D8;
-    }
-    .catalog-card-img img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-    .catalog-card-body {
-      padding: 14px;
-      display: flex;
-      flex-direction: column;
-      flex: 1;
-      justify-content: space-between;
-    }
-    .catalog-card-title {
-      font-weight: 700;
-      font-size: 14px;
-      color: var(--choco-dark);
-      margin-bottom: 6px;
-    }
-    .catalog-card-price {
-      font-weight: 700;
-      color: var(--caramel);
-      font-size: 14px;
-    }
+    .rail-wrap { grid-area: rail; border-top: 1px solid var(--line); background: var(--paper); }
+    .rail-head { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px 0; font-size: 13px; color: var(--ink-soft); font-weight: 500; }
+    .rail { display: flex; gap: 10px; overflow-x: auto; padding: 10px 20px 16px; scroll-snap-type: x proximity; scrollbar-width: thin; }
+    .thumb { flex: none; width: 84px; scroll-snap-align: start; text-align: center; font-size: 11.5px; line-height: 1.3; color: var(--ink-soft); }
+    .thumb img { width: 72px; height: 72px; margin: 0 auto 6px; object-fit: cover; border-radius: 22px; border: 2.5px solid transparent; background: var(--paper-2); transition: border-color 0.2s, transform 0.2s var(--ease); }
+    .thumb:hover img { transform: translateY(-2px); }
+    .thumb.active img { border-color: var(--berry); }
+    .thumb.active { color: var(--ink); font-weight: 600; }
+    .thumb span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
-    /* Cart & Checkout */
-    .cart-item {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      padding: 12px 0;
-      border-bottom: 1px dashed rgba(74, 46, 37, 0.2);
-    }
-    .cart-item-img {
-      width: 60px;
-      height: 60px;
-      border-radius: 8px;
-      object-fit: cover;
-      background: #ddd;
-    }
-    .cart-item-details {
-      flex: 1;
-    }
-    .cart-item-name {
-      font-weight: 700;
-      font-size: 14px;
-      color: var(--choco-dark);
-    }
-    .cart-item-price {
-      color: var(--caramel);
-      font-size: 13px;
-      font-weight: 600;
-    }
-    .cart-remove-btn {
-      background: none;
-      border: none;
-      color: #999;
-      cursor: pointer;
-      font-size: 18px;
-      padding: 4px;
-    }
-    .cart-remove-btn:hover {
-      color: #c00;
-    }
-    .cart-summary {
-      background: rgba(255,255,255,0.7);
-      border-radius: var(--radius-sm);
-      padding: 16px;
-      margin: 20px 0;
-    }
-    .cart-summary-line {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 8px;
-      font-size: 14px;
-    }
-    .cart-summary-total {
-      border-top: 1px solid rgba(74, 46, 37, 0.2);
-      padding-top: 8px;
-      font-weight: 700;
-      font-size: 16px;
-      color: var(--choco-dark);
-    }
+    /* ---------- Sections ---------- */
+    .section { padding: 64px 20px; }
+    .section-inner { max-width: 1200px; margin: 0 auto; }
+    .section-title { font-family: var(--font-display); font-weight: 800; font-size: clamp(28px, 4.4vw, 44px); line-height: 1.08; letter-spacing: -0.015em; margin-bottom: 10px; }
+    .section-sub { color: var(--ink-soft); max-width: 56ch; margin-bottom: 28px; }
 
-    /* Form Fields */
-    .form-group {
-      margin-bottom: 14px;
-    }
-    .form-label {
-      display: block;
-      font-size: 13px;
-      font-weight: 600;
-      margin-bottom: 6px;
-      color: var(--choco-dark);
-    }
-    .form-input, .form-textarea, .form-select {
-      width: 100%;
-      padding: 11px 14px;
-      border-radius: var(--radius-sm);
-      border: 1px solid rgba(74, 46, 37, 0.25);
-      background: #fff;
-      font-family: inherit;
-      font-size: 14px;
-      color: var(--choco-dark);
-      outline: none;
-      transition: var(--transition);
-    }
-    .form-input:focus, .form-textarea:focus {
-      border-color: var(--caramel);
-      box-shadow: 0 0 0 3px rgba(185, 130, 82, 0.15);
-    }
+    .tabs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 24px; scrollbar-width: none; }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab { flex: none; padding: 9px 18px; border-radius: 22px; font-weight: 600; font-size: 13.5px; background: var(--paper-2); transition: background 0.2s, color 0.2s; }
+    .tab:hover { background: var(--pistachio); }
+    .tab.active { background: var(--ink); color: #fff; }
 
-    /* Intro / Splash Screen */
-    #intro-screen {
-      position: fixed;
-      inset: 0;
-      background: linear-gradient(135deg, #2A1711 0%, #4A2E25 100%);
-      z-index: 200;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      color: #fff;
-      text-align: center;
-      padding: 30px;
-      transition: opacity 0.8s ease, visibility 0.8s;
-    }
-    #intro-screen.hidden {
-      opacity: 0;
-      visibility: hidden;
-      pointer-events: none;
-    }
-    .intro-logo {
-      font-family: 'Playfair Display', serif;
-      font-size: clamp(36px, 6vw, 64px);
-      font-weight: 700;
-      letter-spacing: 3px;
-      margin-bottom: 8px;
-      color: var(--bg-cream);
-      text-shadow: 0 4px 20px rgba(0,0,0,0.4);
-    }
-    .intro-sub {
-      font-size: 16px;
-      color: var(--pastel-pink);
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      margin-bottom: 30px;
-    }
-    .intro-desc {
-      max-width: 540px;
-      font-size: 15px;
-      line-height: 1.7;
-      color: #EDE4D8;
-      margin-bottom: 36px;
-      font-weight: 300;
-    }
-    .intro-btn {
-      background: var(--caramel);
-      color: #fff;
-      border: none;
-      padding: 16px 42px;
-      border-radius: 40px;
-      font-size: 16px;
-      font-weight: 700;
-      letter-spacing: 1px;
-      cursor: pointer;
-      box-shadow: 0 10px 30px rgba(185, 130, 82, 0.4);
-      transition: var(--transition);
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .intro-btn:hover {
-      background: #D9A066;
-      transform: translateY(-3px) scale(1.02);
-      box-shadow: 0 14px 40px rgba(185, 130, 82, 0.6);
-    }
-    .intro-tips {
-      margin-top: 30px;
-      font-size: 12px;
-      color: rgba(255, 255, 255, 0.5);
-      display: flex;
-      gap: 20px;
-    }
+    .menu-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px 14px; }
+    .m-card { display: flex; flex-direction: column; }
+    .m-img { position: relative; aspect-ratio: 4 / 5; overflow: hidden; border-radius: 28px 28px 8px 28px; background: var(--paper-2); display: block; width: 100%; }
+    .m-img img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s var(--ease); }
+    .m-img:hover img { transform: scale(1.05); }
+    .m-badge { position: absolute; left: 10px; top: 10px; background: rgba(255,255,255,0.92); font-size: 11.5px; font-weight: 700; padding: 4px 10px; border-radius: 14px; }
+    .m-body { padding: 12px 2px 0; display: flex; flex-direction: column; gap: 4px; flex: 1; }
+    .m-name { font-weight: 700; font-size: 14.5px; line-height: 1.35; }
+    .m-flavor { font-size: 12.5px; color: var(--ink-soft); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .m-foot { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 8px; }
+    .m-price { font-family: var(--font-display); font-weight: 700; color: var(--berry); font-size: 16px; }
+    .m-actions { display: flex; gap: 6px; align-items: center; }
+    .m-view { font-size: 12.5px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; padding: 8px 4px; }
+    .m-add { width: 40px; height: 40px; border-radius: 50%; background: var(--ink); color: #fff; font-size: 20px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; transition: background 0.2s, transform 0.2s var(--ease); }
+    .m-add:hover { background: var(--berry); transform: scale(1.08); }
+    .empty { grid-column: 1 / -1; padding: 30px; text-align: center; color: var(--ink-soft); }
 
-    /* Toast Notification */
+    /* Delivery apps */
+    .delivery { background: var(--ink); color: #fff; }
+    .delivery .section-sub { color: #CDBFD2; }
+    .dl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .dl-tile {
+      display: flex; flex-direction: column; justify-content: space-between; gap: 22px;
+      min-height: 132px; padding: 18px; border-radius: 24px; color: #fff;
+      transition: transform 0.25s var(--ease), box-shadow 0.25s;
+    }
+    .dl-tile:hover { transform: translateY(-4px); box-shadow: 0 14px 30px rgba(0,0,0,0.35); }
+    .dl-name { font-family: var(--font-display); font-weight: 800; font-size: 24px; line-height: 1; }
+    .dl-state { display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 600; }
+    .dl-be { background: #FFD84D; color: #2B1B2E; }
+    .dl-grab { background: #00B14F; color: #06261A; }
+    .dl-shopee { background: #D93A18; }
+    .dl-xanh { background: #0B8A85; }
+    .dl-tile.disabled { background: #43344A; color: #B5A6BA; cursor: not-allowed; }
+    .dl-tile.disabled:hover { transform: none; box-shadow: none; }
+    .dl-note { margin-top: 18px; font-size: 13px; color: #CDBFD2; }
+    .dl-note a { color: #fff; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+
+    /* Contact */
+    .contact-grid { display: grid; gap: 32px; }
+    .info-list { display: grid; gap: 0; }
+    .info-row { display: grid; grid-template-columns: 110px 1fr; gap: 12px; padding: 14px 0; border-top: 1px solid var(--line); }
+    .info-row dt { font-weight: 600; }
+    .info-row dd { color: var(--ink-soft); }
+    .info-row a { color: var(--berry); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+    .social-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .social {
+      display: flex; align-items: center; gap: 12px; padding: 16px; border-radius: 22px;
+      background: var(--paper-2); font-weight: 700; transition: background 0.2s, transform 0.2s var(--ease);
+    }
+    .social:hover { background: var(--pistachio); transform: translateY(-3px); }
+    .social .ic { width: 24px; height: 24px; }
+    .social.hidden { display: none; }
+    .zalo-mark { width: 24px; height: 24px; border-radius: 7px; background: #0068FF; color: #fff; font-size: 10px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+    .site-footer { padding: 28px 20px calc(28px + 64px); text-align: center; color: var(--ink-soft); font-size: 13px; border-top: 1px solid var(--line); }
+
+    /* Mobile bottom bar */
+    .bottom-bar {
+      position: fixed; inset: auto 0 0 0; z-index: 45; display: grid; grid-template-columns: repeat(4, 1fr);
+      background: rgba(251,247,247,0.94); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+      border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom);
+    }
+    .bar-item { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 58px; font-size: 11.5px; font-weight: 600; color: var(--ink); }
+    .bar-item .badge-count { position: absolute; top: 6px; left: calc(50% + 6px); background: var(--berry); color: #fff; min-width: 18px; height: 18px; font-size: 10.5px; }
+
+    /* ---------- Modals ---------- */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 100; display: flex; align-items: flex-end; justify-content: center;
+      padding: 0; background: rgba(43,27,46,0.6); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+      opacity: 0; visibility: hidden; transition: opacity 0.3s, visibility 0.3s;
+    }
+    .modal-overlay.open { opacity: 1; visibility: visible; }
+    .modal-card {
+      position: relative; width: 100%; max-width: 640px; max-height: 92svh; overflow-y: auto;
+      background: var(--paper); border-radius: 28px 28px 0 0; padding: 28px 20px calc(24px + env(safe-area-inset-bottom));
+      transform: translateY(40px); transition: transform 0.35s var(--ease);
+    }
+    .modal-overlay.open .modal-card { transform: translateY(0); }
+    .modal-close { position: absolute; top: 14px; right: 14px; width: 40px; height: 40px; border-radius: 50%; background: var(--paper-2); font-size: 22px; line-height: 1; display: flex; align-items: center; justify-content: center; }
+    .modal-close:hover { background: var(--pistachio); }
+    .modal-title { font-family: var(--font-display); font-weight: 800; font-size: 26px; margin-bottom: 4px; padding-right: 44px; }
+    .modal-sub { color: var(--ink-soft); font-size: 13.5px; margin-bottom: 18px; }
+
+    .cart-list { max-height: 260px; overflow-y: auto; margin-bottom: 14px; }
+    .cart-empty { text-align: center; padding: 24px 8px; color: var(--ink-soft); }
+    .cart-item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px dashed var(--line); }
+    .cart-item img { width: 56px; height: 56px; border-radius: 14px; object-fit: cover; background: var(--paper-2); }
+    .ci-info { flex: 1; min-width: 0; }
+    .ci-name { font-weight: 700; font-size: 14px; line-height: 1.3; }
+    .ci-price { color: var(--berry); font-weight: 600; font-size: 13px; }
+    .ci-qty { display: inline-flex; align-items: center; gap: 2px; }
+    .ci-qty button { width: 32px; height: 32px; border-radius: 50%; background: var(--paper-2); font-weight: 700; }
+    .ci-qty span { min-width: 22px; text-align: center; font-weight: 700; font-size: 14px; }
+    .ci-remove { width: 32px; height: 32px; color: var(--ink-soft); font-size: 20px; }
+    .ci-remove:hover { color: var(--berry); }
+    .summary { background: var(--paper-2); border-radius: 18px; padding: 14px 16px; margin-bottom: 18px; }
+    .summary div { display: flex; justify-content: space-between; font-size: 14px; padding: 3px 0; }
+    .summary .total { border-top: 1px solid var(--line); margin-top: 6px; padding-top: 10px; font-weight: 800; font-size: 17px; }
+    .summary .total span:last-child { color: var(--berry); }
+
+    .form-row { display: grid; grid-template-columns: 1fr; gap: 0 12px; }
+    .form-group { margin-bottom: 14px; }
+    .form-label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+    .form-input, .form-select {
+      width: 100%; min-height: 46px; padding: 10px 14px; border-radius: 14px;
+      border: 1.5px solid var(--line); background: #fff; font: inherit; font-size: 16px; color: var(--ink);
+    }
+    .form-input:focus, .form-select:focus { outline: none; border-color: var(--berry); box-shadow: 0 0 0 3px rgba(194,37,92,0.15); }
+    .alt-order { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-soft); }
+    .alt-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+    .alt-chip { padding: 8px 14px; border-radius: 18px; font-weight: 700; font-size: 13px; color: #fff; }
+    .alt-chip.dl-be { color: var(--ink); }
+    .alt-chip.dl-grab { color: #06261A; }
+    .alt-chip.disabled { background: #D7CDDB; color: #7C6C82; pointer-events: none; }
+
+    .success { text-align: center; }
+    .success .big { font-size: 44px; line-height: 1; margin-bottom: 10px; }
+    .pay-box { background: #fff; border: 1px solid var(--line); border-radius: 20px; padding: 16px; margin: 16px 0; text-align: left; }
+    .pay-box h4 { text-align: center; font-size: 14px; margin-bottom: 10px; }
+    .qr { text-align: center; margin-bottom: 12px; }
+    .qr img { width: 190px; max-width: 100%; margin: 0 auto; border-radius: 12px; border: 1px solid var(--line); background: #fff; }
+    .pay-line { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 7px 0; border-top: 1px solid var(--line); font-size: 13.5px; }
+    .pay-line span:first-child { color: var(--ink-soft); }
+    .pay-line strong { text-align: right; word-break: break-word; }
+    .copy-btn { margin-left: 8px; font-size: 12px; font-weight: 700; color: var(--berry); text-decoration: underline; text-underline-offset: 3px; }
+    .pay-note { font-size: 12px; color: var(--ink-soft); margin-top: 10px; text-align: center; font-style: italic; }
+
     #toast {
-      position: fixed;
-      bottom: 30px;
-      left: 50%;
-      transform: translateX(-50%) translateY(100px);
-      background: var(--choco-dark);
-      color: #fff;
-      padding: 12px 24px;
-      border-radius: 30px;
-      font-size: 14px;
-      font-weight: 500;
-      z-index: 300;
-      box-shadow: var(--shadow-elevated);
-      transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      pointer-events: none;
-      border: 1px solid rgba(255,255,255,0.15);
+      position: fixed; left: 50%; bottom: calc(76px + env(safe-area-inset-bottom)); z-index: 300;
+      transform: translate(-50%, 30px); opacity: 0; pointer-events: none;
+      background: var(--ink); color: #fff; padding: 12px 22px; border-radius: 26px; font-size: 14px; font-weight: 500;
+      max-width: calc(100vw - 32px); text-align: center; box-shadow: 0 14px 40px rgba(43,27,46,0.35);
+      transition: transform 0.3s var(--ease), opacity 0.3s;
     }
-    #toast.show {
-      transform: translateX(-50%) translateY(0);
-    }
+    #toast.show { transform: translate(-50%, 0); opacity: 1; }
 
-    /* Responsive */
-    @media (max-width: 768px) {
-      .product-modal-content {
-        grid-template-columns: 1fr;
+    /* ---------- Tablet & Desktop ---------- */
+    @media (min-width: 640px) {
+      .menu-grid { grid-template-columns: repeat(3, 1fr); gap: 32px 20px; }
+      .dl-grid { grid-template-columns: repeat(4, 1fr); }
+      .form-row { grid-template-columns: 1fr 1fr; }
+      .logo small { display: inline; }
+    }
+    @media (min-width: 900px) {
+      .nav { display: flex; }
+      .hero {
+        grid-template-columns: minmax(360px, 460px) 1fr;
+        grid-template-rows: 1fr auto;
+        grid-template-areas: "panel stage" "rail rail";
+        min-height: 100svh;
       }
-      .product-modal-img {
-        min-height: 200px;
-        max-height: 240px;
-      }
-      .control-hint {
-        display: none;
-      }
-      #mobile-controls {
-        display: flex;
-      }
-      .hud-header {
-        top: 14px;
-        left: 14px;
-        right: 14px;
-      }
-      .brand-title {
-        font-size: 15px;
-      }
+      .stage { height: auto; min-height: 520px; }
+      .panel { padding: 40px 36px 40px max(36px, calc((100vw - 1200px) / 2)); }
+      .rail-head, .rail { padding-left: max(24px, calc((100vw - 1200px) / 2)); padding-right: 24px; }
+      .section { padding: 96px 24px; }
+      .menu-grid { grid-template-columns: repeat(4, 1fr); }
+      .contact-grid { grid-template-columns: 1.1fr 1fr; gap: 56px; align-items: start; }
+      .bottom-bar { display: none; }
+      .site-footer { padding-bottom: 28px; }
+      #toast { bottom: 28px; }
+      .modal-overlay { align-items: center; padding: 24px; }
+      .modal-card { border-radius: 28px; padding: 32px; transform: translateY(20px) scale(0.98); }
+      .modal-overlay.open .modal-card { transform: none; }
+    }
+    @media (min-width: 1200px) { .menu-grid { gap: 40px 24px; } }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
     }
   </style>
 
-  <!-- Thư viện Three.js ổn định từ CDN uy tín -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
-  <!-- Khung WebGL Canvas hiển thị không gian 3D -->
-  <canvas id="webgl-canvas"></canvas>
+  <h1 class="sr-only">PETIT FOUR — Tiệm bánh Artisan: xem bánh 3D và đặt hàng trực tuyến</h1>
 
-  <!-- Điểm ngắm tương tác First-Person -->
-  <div id="crosshair"></div>
-  <div id="interaction-prompt">Nhấn [E] hoặc Chạm để xem bánh</div>
-
-  <!-- HUD Header -->
-  <div class="hud-header">
-    <div class="brand-badge">
-      <span class="brand-title" id="hud-brand-title">PETIT FOUR</span>
-      <span class="brand-tag">Artisan 3D</span>
-    </div>
-
-    <div class="hud-actions">
-      <button class="hud-btn" id="btn-open-menu" title="Mở thực đơn">
-        <span>📖 Menu</span>
+  <!-- ===== Header ===== -->
+  <header class="site-header" id="site-header">
+    <a href="#hero" class="logo" aria-label="Về đầu trang">
+      <span data-brand>PETIT FOUR</span>
+      <small data-brand-sub>Artisan Bakery &amp; Tea House</small>
+    </a>
+    <nav class="nav" aria-label="Điều hướng chính">
+      <a href="#hero">Xem bánh 3D</a>
+      <a href="#menu">Thực đơn</a>
+      <a href="#delivery">Đặt qua app</a>
+      <a href="#contact">Liên hệ</a>
+    </nav>
+    <div class="header-actions">
+      <button class="icon-btn" id="btn-toggle-sound" aria-pressed="false" aria-label="Bật hoặc tắt âm thanh">
+        <svg class="ic snd-off" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4V5z"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+        <svg class="ic snd-on" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
       </button>
-      <button class="hud-btn" id="btn-open-cart" title="Xem giỏ hàng">
-        <span>🛒 Giỏ</span>
+      <button class="icon-btn cart-btn" id="btn-open-cart" aria-label="Mở giỏ hàng">
+        <svg class="ic" viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+        <span>Giỏ hàng</span>
         <span class="badge-count" id="cart-counter">0</span>
       </button>
-      <button class="hud-btn" id="btn-toggle-sound" title="Bật/Tắt âm thanh">
-        <span id="sound-icon">🔇</span>
-      </button>
     </div>
-  </div>
+  </header>
 
-  <!-- HUD Footer Hints -->
-  <div class="hud-footer">
-    <div class="control-hint">
-      <span class="key-badge">W A S D</span> Di chuyển
-    </div>
-    <div class="control-hint">
-      <span class="key-badge">Chuột</span> Nhìn xung quanh
-    </div>
-    <div class="control-hint">
-      <span class="key-badge">E</span> hoặc <span class="key-badge">Click</span> Tương tác
-    </div>
-    <div class="control-hint">
-      <span class="key-badge">ESC</span> Mở chuột
-    </div>
-  </div>
+  <main>
+    <!-- ===== Hero: showroom 3D ===== -->
+    <section class="hero" id="hero" aria-label="Xem bánh 3D">
+      <div class="stage" id="stage-wrap">
+        <div class="stage-ghost" id="stage-ghost" aria-hidden="true">Petit Four</div>
+        <canvas id="stage-canvas" aria-label="Mô hình 3D của bánh. Kéo ngang để xoay."></canvas>
+        <div class="stage-fallback"><img id="stage-fallback-img" src="" alt=""></div>
+        <div class="stage-hint" id="stage-hint">
+          <svg class="ic" viewBox="0 0 24 24" style="width:16px;height:16px"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+          Kéo để xoay 360°
+        </div>
+        <button class="icon-btn stage-arrow prev" id="btn-prev" aria-label="Món trước"><svg class="ic" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
+        <button class="icon-btn stage-arrow next" id="btn-next" aria-label="Món tiếp theo"><svg class="ic" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></button>
+        <div class="stage-tools">
+          <button class="icon-btn" id="btn-zoom-out" aria-label="Thu nhỏ"><svg class="ic" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+          <button class="icon-btn" id="btn-zoom-in" aria-label="Phóng to"><svg class="ic" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+        </div>
+      </div>
 
-  <!-- Joystick ảo cho điện thoại di động -->
-  <div id="mobile-controls">
-    <div class="joystick-zone" id="joystick-zone">
-      <div class="joystick-knob" id="joystick-knob"></div>
-    </div>
-    <div class="mobile-actions">
-      <button class="mobile-action-btn" id="mobile-interact-btn">E</button>
-      <button class="mobile-action-btn" id="mobile-checkout-btn">💳</button>
-    </div>
-  </div>
+      <div class="panel" aria-live="polite">
+        <div class="p-cat" id="p-category">Artisan</div>
+        <h2 class="p-name" id="p-name">Đang tải thực đơn…</h2>
+        <div class="p-price" id="p-price"></div>
+        <p class="p-desc" id="p-desc"></p>
+        <dl class="p-meta">
+          <dt>Hương vị</dt><dd id="p-flavor">—</dd>
+          <dt>Nguyên liệu</dt><dd id="p-ingredients">—</dd>
+          <dt>Khối lượng</dt><dd id="p-weight">—</dd>
+        </dl>
+        <div class="buy-row">
+          <div class="qty" role="group" aria-label="Số lượng">
+            <button id="qty-minus" aria-label="Giảm số lượng">&minus;</button>
+            <span id="qty-count">1</span>
+            <button id="qty-plus" aria-label="Tăng số lượng">+</button>
+          </div>
+          <button class="btn-primary" id="btn-add-to-cart">
+            <span>Thêm vào giỏ</span>
+            <span id="detail-btn-price">0 đ</span>
+          </button>
+        </div>
+        <p class="p-links">Không muốn đặt ở đây? <a href="#delivery">Đặt qua app giao hàng</a></p>
+      </div>
 
-  <!-- Màn hình giới thiệu ban đầu (Splash Screen) -->
-  <div id="intro-screen">
-    <div class="intro-logo" id="intro-brand-name">PETIT FOUR</div>
-    <div class="intro-sub" id="intro-brand-sub">ARTISAN BAKERY & TEA HOUSE</div>
-    <p class="intro-desc">
-      Chào mừng bạn đến với trải nghiệm mua bánh 3D tương tác. Hãy bước vào tiệm, cảm nhận ánh sáng ấm áp, hương bánh nướng mới mỗi sáng và tự tay lựa chọn những chiếc bánh tinh xảo nhất.
-    </p>
-    <button class="intro-btn" id="btn-enter-store">
-      <span>BƯỚC VÀO TIỆM BÁNH</span>
-      <span>➔</span>
-    </button>
-    <div class="intro-tips">
-      <span>✨ Không gian 3D First-Person</span>
-      <span>🥐 Bánh nướng thủ công</span>
-      <span>💳 Đặt & Thanh toán trực tiếp</span>
-    </div>
-  </div>
+      <div class="rail-wrap">
+        <div class="rail-head"><span>Chọn món để xem 3D</span><span id="p-counter">0 / 0</span></div>
+        <div class="rail" id="rail" role="listbox" aria-label="Danh sách món"></div>
+      </div>
+    </section>
 
-  <!-- Modal 1: Chi tiết sản phẩm bánh 3D -->
-  <div class="modal-overlay" id="modal-product">
+    <!-- ===== Thực đơn ===== -->
+    <section class="section" id="menu">
+      <div class="section-inner">
+        <h2 class="section-title">Thực đơn hôm nay</h2>
+        <p class="section-sub">Nướng thủ công mỗi sáng. Bấm “Xem 3D” để xoay bánh, hoặc bấm dấu + để thêm ngay vào giỏ.</p>
+        <div class="tabs" id="catalog-category-tabs" role="tablist" aria-label="Lọc theo danh mục"></div>
+        <div class="menu-grid" id="catalog-products-grid"></div>
+      </div>
+    </section>
+
+    <!-- ===== Đặt qua app giao hàng ===== -->
+    <section class="section delivery" id="delivery">
+      <div class="section-inner">
+        <h2 class="section-title">Đặt qua app giao hàng</h2>
+        <p class="section-sub">Quen dùng app nào thì mở app đó. Tiệm giao bánh tươi, tích điểm và ưu đãi theo từng app.</p>
+        <div class="dl-grid">
+          <a class="dl-tile dl-be" id="dl-be" target="_blank" rel="noopener noreferrer">
+            <span class="dl-name">beFood</span>
+            <span class="dl-state"><span class="dl-text">Mở app Be</span><svg class="ic" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></span>
+          </a>
+          <a class="dl-tile dl-grab" id="dl-grab" target="_blank" rel="noopener noreferrer">
+            <span class="dl-name">GrabFood</span>
+            <span class="dl-state"><span class="dl-text">Mở app Grab</span><svg class="ic" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></span>
+          </a>
+          <a class="dl-tile dl-shopee" id="dl-shopee" target="_blank" rel="noopener noreferrer">
+            <span class="dl-name">ShopeeFood</span>
+            <span class="dl-state"><span class="dl-text">Mở app Shopee</span><svg class="ic" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></span>
+          </a>
+          <a class="dl-tile dl-xanh" id="dl-xanh" target="_blank" rel="noopener noreferrer">
+            <span class="dl-name">Xanh SM</span>
+            <span class="dl-state"><span class="dl-text">Mở app Xanh SM</span><svg class="ic" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></span>
+          </a>
+        </div>
+        <p class="dl-note">Muốn đặt trực tiếp với tiệm? <a href="#hero">Chọn bánh và thanh toán tại đây</a>.</p>
+      </div>
+    </section>
+
+    <!-- ===== Liên hệ ===== -->
+    <section class="section" id="contact">
+      <div class="section-inner contact-grid">
+        <div>
+          <h2 class="section-title">Ghé tiệm hoặc nhắn cho chúng tôi</h2>
+          <p class="section-sub">Đặt bánh sinh nhật, bánh theo yêu cầu hay đơn số lượng lớn? Gọi hoặc nhắn Zalo để được tư vấn nhanh nhất.</p>
+          <dl class="info-list">
+            <div class="info-row"><dt>Địa chỉ</dt><dd><span id="ct-address">—</span> <a id="ct-map" href="#" target="_blank" rel="noopener noreferrer">Xem bản đồ</a></dd></div>
+            <div class="info-row"><dt>Giờ mở cửa</dt><dd id="ct-hours">—</dd></div>
+            <div class="info-row"><dt>Điện thoại</dt><dd><a id="ct-phone-text" href="#">—</a></dd></div>
+          </dl>
+        </div>
+        <div class="social-grid">
+          <a class="social" id="ct-phone" href="#"><svg class="ic" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>Gọi hotline</a>
+          <a class="social" id="ct-zalo" href="#" target="_blank" rel="noopener noreferrer"><span class="zalo-mark">Zalo</span>Nhắn Zalo</a>
+          <a class="social" id="ct-facebook" href="#" target="_blank" rel="noopener noreferrer"><svg class="ic" viewBox="0 0 24 24"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>Facebook</a>
+          <a class="social" id="ct-instagram" href="#" target="_blank" rel="noopener noreferrer"><svg class="ic" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>Instagram</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <span data-brand>PETIT FOUR</span> — <span data-brand-sub>Artisan Bakery &amp; Tea House</span>. Bánh nướng thủ công mỗi ngày.
+  </footer>
+
+  <!-- ===== Thanh điều hướng nhanh trên điện thoại ===== -->
+  <nav class="bottom-bar" aria-label="Thao tác nhanh">
+    <a class="bar-item" href="#menu"><svg class="ic" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>Thực đơn</a>
+    <a class="bar-item" id="bar-call" href="#contact"><svg class="ic" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>Gọi tiệm</a>
+    <a class="bar-item" href="#delivery"><svg class="ic" viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>Đặt qua app</a>
+    <button class="bar-item" id="bar-cart" aria-label="Mở giỏ hàng"><svg class="ic" viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>Giỏ hàng<span class="badge-count" id="bar-cart-counter">0</span></button>
+  </nav>
+
+  <!-- ===== Modal: Giỏ hàng & thanh toán ===== -->
+  <div class="modal-overlay" id="modal-checkout" role="dialog" aria-modal="true" aria-labelledby="checkout-title">
     <div class="modal-card">
-      <button class="modal-close" data-close="modal-product">&times;</button>
-      <div class="product-modal-content">
-        <div class="product-modal-img">
-          <img id="detail-img" src="" alt="Hình bánh">
-        </div>
-        <div class="product-modal-info">
-          <div>
-            <div class="prod-category-badge" id="detail-category">PASTRY</div>
-            <h3 class="prod-title" id="detail-name">Croissant Bơ Pháp</h3>
-            <div class="prod-price" id="detail-price">45.000 đ</div>
-            <p class="prod-desc" id="detail-desc">Mô tả bánh...</p>
-            
-            <div class="prod-meta-box">
-              <div><strong>Hương vị:</strong> <span id="detail-flavor">Béo nhẹ, vỏ giòn ruột xốp</span></div>
-              <div><strong>Nguyên liệu:</strong> <span id="detail-ingredients">Bơ Pháp Elle & Vire, Bột T55</span></div>
-              <div><strong>Trọng lượng:</strong> <span id="detail-weight">90g</span></div>
-            </div>
-          </div>
+      <button class="modal-close" data-close="modal-checkout" aria-label="Đóng">&times;</button>
+      <h2 class="modal-title" id="checkout-title">Giỏ hàng của bạn</h2>
+      <p class="modal-sub">Kiểm tra món, điền thông tin và gửi đơn. Tiệm sẽ gọi xác nhận ngay.</p>
 
-          <div>
-            <div class="qty-control">
-              <span style="font-weight: 600; font-size: 14px;">Số lượng:</span>
-              <button class="qty-btn" id="qty-minus">-</button>
-              <span class="qty-val" id="qty-count">1</span>
-              <button class="qty-btn" id="qty-plus">+</button>
-            </div>
-            <button class="btn-primary" id="btn-add-to-cart">
-              <span>Thêm vào giỏ hàng</span>
-              <span id="detail-btn-price">45.000 đ</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+      <div class="cart-list" id="cart-items-container"></div>
 
-  <!-- Modal 2: Bảng Menu tương tác & Tìm kiếm -->
-  <div class="modal-overlay" id="modal-catalog">
-    <div class="modal-card" style="max-width: 860px;">
-      <button class="modal-close" data-close="modal-catalog">&times;</button>
-      <div class="catalog-modal-content">
-        <div class="catalog-header">
-          <h2>Thực Đơn Tiệm Bánh</h2>
-          <p style="color:#776; font-size:14px; margin-top:4px;">Những mẻ bánh thủ công tươi mới nướng mỗi ngày</p>
-        </div>
-
-        <div class="cat-tabs" id="catalog-category-tabs">
-          <!-- Đổ động từ API hoặc danh mục mặc định -->
-        </div>
-
-        <div class="catalog-grid" id="catalog-products-grid">
-          <!-- Đổ động danh sách bánh -->
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal 3: Giỏ hàng & Checkout Quầy Thu Ngân -->
-  <div class="modal-overlay" id="modal-checkout">
-    <div class="modal-card" style="max-width: 620px; padding: 32px;">
-      <button class="modal-close" data-close="modal-checkout">&times;</button>
-      <div class="catalog-header" style="margin-bottom: 20px;">
-        <h2>Quầy Thu Ngân & Đặt Hàng</h2>
-        <p style="color:#776; font-size:13px;">Xác nhận đơn và nhận bánh tươi ngay tại nhà hoặc tại tiệm</p>
+      <div class="summary">
+        <div><span>Tiền bánh</span><span id="summary-subtotal">0 đ</span></div>
+        <div><span>Phí giao hàng</span><span id="summary-shipping">0 đ</span></div>
+        <div class="total"><span>Tổng cộng</span><span id="summary-total">0 đ</span></div>
       </div>
 
-      <!-- Danh sách món đã chọn -->
-      <div id="cart-items-container" style="max-height: 240px; overflow-y: auto; margin-bottom: 16px;">
-        <!-- Đổ động giỏ hàng -->
-      </div>
-
-      <!-- Tổng hóa đơn -->
-      <div class="cart-summary">
-        <div class="cart-summary-line">
-          <span>Tiền bánh:</span>
-          <span id="summary-subtotal" style="font-weight:600;">0 đ</span>
-        </div>
-        <div class="cart-summary-line">
-          <span>Phí giao hàng:</span>
-          <span id="summary-shipping" style="font-weight:600;">0 đ</span>
-        </div>
-        <div class="cart-summary-line cart-summary-total">
-          <span>TỔNG CỘNG:</span>
-          <span id="summary-total" style="color:var(--caramel);">0 đ</span>
-        </div>
-      </div>
-
-      <!-- Form thông tin khách -->
-      <form id="checkout-form">
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+      <form id="checkout-form" novalidate>
+        <div class="form-row">
           <div class="form-group">
-            <label class="form-label">Tên của bạn *</label>
-            <input type="text" class="form-input" id="cust-name" required placeholder="Ví dụ: Lê Minh Trí">
+            <label class="form-label" for="cust-name">Tên của bạn *</label>
+            <input type="text" class="form-input" id="cust-name" required autocomplete="name" placeholder="Ví dụ: Lê Minh Trí">
           </div>
           <div class="form-group">
-            <label class="form-label">Số điện thoại *</label>
-            <input type="tel" class="form-input" id="cust-phone" required placeholder="0988xxxxxx">
+            <label class="form-label" for="cust-phone">Số điện thoại *</label>
+            <input type="tel" class="form-input" id="cust-phone" required autocomplete="tel" inputmode="tel" placeholder="0988 xxx xxx">
           </div>
         </div>
-
         <div class="form-group">
-          <label class="form-label">Phương thức nhận bánh</label>
+          <label class="form-label" for="cust-delivery-method">Cách nhận bánh</label>
           <select class="form-select" id="cust-delivery-method">
-            <option value="pickup">Đến lấy tại tiệm bánh (Miễn phí)</option>
-            <option value="delivery">Giao tận nơi (+25.000 đ)</option>
+            <option value="pickup">Đến lấy tại tiệm (miễn phí)</option>
+            <option value="delivery">Giao tận nơi</option>
           </select>
         </div>
-
         <div class="form-group" id="address-group" style="display:none;">
-          <label class="form-label">Địa chỉ nhận bánh</label>
-          <input type="text" class="form-input" id="cust-address" placeholder="Số nhà, tên đường, phường, quận...">
+          <label class="form-label" for="cust-address">Địa chỉ nhận bánh *</label>
+          <input type="text" class="form-input" id="cust-address" autocomplete="street-address" placeholder="Số nhà, tên đường, phường, quận…">
         </div>
-
         <div class="form-group">
-          <label class="form-label">Ghi chú cho Baker</label>
-          <input type="text" class="form-input" id="cust-note" placeholder="Cắt sẵn, thắt nơ quà tặng, viết thiệp...">
+          <label class="form-label" for="cust-note">Ghi chú cho thợ bánh</label>
+          <input type="text" class="form-input" id="cust-note" placeholder="Cắt sẵn, thắt nơ quà tặng, viết thiệp…">
         </div>
-
         <div class="form-group">
-          <label class="form-label">Phương thức thanh toán</label>
+          <label class="form-label" for="cust-payment-method">Thanh toán</label>
           <select class="form-select" id="cust-payment-method">
-            <option value="transfer">Chuyển khoản VietQR (Khuyên dùng)</option>
-            <option value="cod">Thanh toán khi nhận bánh</option>
+            <option value="transfer">Chuyển khoản VietQR (khuyên dùng)</option>
+            <option value="cod">Trả tiền khi nhận bánh</option>
           </select>
         </div>
-
-        <button type="submit" class="btn-primary" id="btn-submit-order" style="margin-top: 20px;">
-          <span>Gửi Đơn Đặt Bánh</span>
-          <span>➔</span>
+        <button type="submit" class="btn-primary" id="btn-submit-order" style="width:100%; margin-top:8px;">
+          <span>Gửi đơn đặt bánh</span>
         </button>
       </form>
-    </div>
-  </div>
 
-  <!-- Modal 4: Đặt Hàng Thành Công & Mã QR Thanh Toán -->
-  <div class="modal-overlay" id="modal-success">
-    <div class="modal-card" style="max-width: 520px; padding: 32px; text-align: center;">
-      <button class="modal-close" data-close="modal-success">&times;</button>
-      <div style="font-size: 48px; margin-bottom: 12px;">🎉</div>
-      <h3 style="font-family:'Playfair Display',serif; font-size:24px; color:var(--choco-dark); margin-bottom:8px;">Đặt Bánh Thành Công!</h3>
-      <p style="font-size: 14px; color: #666; margin-bottom: 16px;">
-        Mã đơn hàng của bạn: <strong id="success-order-id" style="color:var(--caramel);">PF-2026-XXXX</strong>
-      </p>
-
-      <div id="transfer-instruction-box" style="background:#FFF9F2; border:1px solid #E4D5C5; border-radius:var(--radius-sm); padding:16px; margin-bottom:20px; text-align:left;">
-        <div style="font-weight:700; color:var(--choco-dark); margin-bottom:8px; font-size:14px; text-align:center;">
-          QUÉT MÃ VIETQR ĐỂ HOÀN TẤT
-        </div>
-        <div style="text-align:center; margin-bottom:12px;">
-          <img id="success-qr-img" src="" alt="QR Thanh toán" style="max-width: 180px; border-radius:8px; border:1px solid #ddd;">
-        </div>
-        <div style="font-size:13px; line-height:1.6; color:#554;">
-          <div>• Ngân hàng: <strong id="success-bank-name">Vietcombank</strong></div>
-          <div>• Số tài khoản: <strong id="success-bank-acc">0011004567890</strong></div>
-          <div>• Chủ tài khoản: <strong id="success-bank-holder">PETIT FOUR BAKERY</strong></div>
-          <div>• Số tiền: <strong id="success-total-val" style="color:var(--caramel);">0 đ</strong></div>
-          <div>• Nội dung: <strong id="success-transfer-memo">PF-XXXX</strong></div>
-        </div>
-        <p style="font-size:11.5px; color:#888; margin-top:10px; font-style:italic; text-align:center;">
-          * Đơn hàng sẽ được nhân viên tiệm gọi xác nhận và nướng bánh ngay sau khi nhận được chuyển khoản.
-        </p>
-      </div>
-
-      <div style="display:flex; gap:10px;">
-        <button class="btn-primary" id="btn-back-to-bakery" style="background:var(--caramel);">
-          Tiếp tục dạo tiệm 3D
-        </button>
+      <div class="alt-order">
+        Thích đặt qua app giao hàng?
+        <div class="alt-row" id="checkout-delivery"></div>
       </div>
     </div>
   </div>
 
-  <!-- Toast thông báo nhỏ -->
-  <div id="toast">Thông báo</div>
+  <!-- ===== Modal: Đặt hàng thành công ===== -->
+  <div class="modal-overlay" id="modal-success" role="dialog" aria-modal="true" aria-labelledby="success-title">
+    <div class="modal-card success">
+      <button class="modal-close" data-close="modal-success" aria-label="Đóng">&times;</button>
+      <div class="big" aria-hidden="true">🎉</div>
+      <h2 class="modal-title" id="success-title" style="padding-right:0;">Đã nhận đơn của bạn!</h2>
+      <p class="modal-sub" style="margin-bottom:0;">Mã đơn hàng: <strong id="success-order-id" style="color:var(--berry);">PF-XXXX</strong></p>
 
-  <!-- Nạp file logic chính app.js -->
+      <div class="pay-box" id="transfer-instruction-box">
+        <h4>Quét mã VietQR để hoàn tất thanh toán</h4>
+        <div class="qr"><img id="success-qr-img" src="" alt="Mã QR chuyển khoản"></div>
+        <div class="pay-line"><span>Ngân hàng</span><strong id="success-bank-name">Vietcombank</strong></div>
+        <div class="pay-line"><span>Số tài khoản</span><span><strong id="success-bank-acc">0011004567890</strong><button type="button" class="copy-btn" data-copy="success-bank-acc">Sao chép</button></span></div>
+        <div class="pay-line"><span>Chủ tài khoản</span><strong id="success-bank-holder">PETIT FOUR</strong></div>
+        <div class="pay-line"><span>Số tiền</span><strong id="success-total-val" style="color:var(--berry);">0 đ</strong></div>
+        <div class="pay-line"><span>Nội dung</span><span><strong id="success-transfer-memo">PF-XXXX</strong><button type="button" class="copy-btn" data-copy="success-transfer-memo">Sao chép</button></span></div>
+        <p class="pay-note">Tiệm sẽ gọi xác nhận và bắt đầu nướng bánh ngay sau khi nhận được chuyển khoản.</p>
+      </div>
+
+      <div class="pay-box" id="cod-note" style="display:none;">
+        <h4>Thanh toán khi nhận bánh</h4>
+        <p class="pay-note" style="font-style:normal; margin-top:0;">Bạn chuẩn bị <strong id="cod-total">0 đ</strong>. Tiệm sẽ gọi xác nhận đơn trong ít phút.</p>
+      </div>
+
+      <button class="btn-primary" id="btn-back-to-bakery" style="width:100%;">Tiếp tục xem bánh</button>
+    </div>
+  </div>
+
+  <div id="toast" role="status" aria-live="polite">Thông báo</div>
+
   <script src="app.js"></script>
 </body>
 </html>
