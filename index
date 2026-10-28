@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>PETIT FOUR — Tiệm Bánh Artisan 3D Tương Tác</title>
+  <meta name="description" content="Trải nghiệm không gian tiệm bánh 3D phong cách Pháp - Nhật thanh lịch. Dạo bước trong cửa hàng, ngắm nhìn từng chiếc bánh thủ công và đặt bánh trực tiếp.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-cream: #F7F1E8;
+      --bg-cream-alpha: rgba(247, 241, 232, 0.94);
+      --choco-dark: #4A2E25;
+      --choco-deep: #2A1711;
+      --caramel: #B98252;
+      --caramel-light: #D9A066;
+      --pastel-pink: #E8C9C0;
+      --sage-green: #9EAA91;
+      --pure-white: #FFFFFF;
+      --shadow-soft: 0 16px 36px rgba(74, 46, 37, 0.12);
+      --shadow-elevated: 0 24px 60px rgba(42, 23, 17, 0.22);
+      --transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 24px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--choco-deep);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      color: var(--choco-dark);
+      font-size: 15px;
+    }
+
+    /* 3D Canvas */
+    #webgl-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      display: block;
+      outline: none;
+    }
+
+    /* Reticle / Crosshair */
+    #crosshair {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.65);
+      border: 1.5px solid rgba(74, 46, 37, 0.4);
+      pointer-events: none;
+      z-index: 10;
+      transition: transform 0.2s ease, background 0.2s ease;
+    }
+    #crosshair.active {
+      transform: translate(-50%, -50%) scale(2.2);
+      background: var(--caramel);
+      border-color: #fff;
+    }
+
+    /* Interaction Prompt */
+    #interaction-prompt {
+      position: fixed;
+      top: calc(50% + 24px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(42, 23, 17, 0.85);
+      backdrop-filter: blur(8px);
+      color: #fff;
+      padding: 8px 16px;
+      border-radius: 30px;
+      font-size: 13px;
+      letter-spacing: 0.5px;
+      pointer-events: none;
+      z-index: 10;
+      display: none;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.25);
+      border: 1px solid rgba(255,255,255,0.15);
+      animation: fadeIn 0.2s ease-out;
+    }
+
+    /* HUD Bar */
+    .hud-header {
+      position: fixed;
+      top: 20px;
+      left: 24px;
+      right: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 20;
+      pointer-events: none;
+    }
+    .hud-header * {
+      pointer-events: auto;
+    }
+    .brand-badge {
+      background: var(--bg-cream-alpha);
+      backdrop-filter: blur(12px);
+      padding: 10px 20px;
+      border-radius: 40px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: var(--shadow-soft);
+      border: 1px solid rgba(255, 255, 255, 0.6);
+    }
+    .brand-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--choco-dark);
+      letter-spacing: 1px;
+    }
+    .brand-tag {
+      font-size: 11px;
+      background: var(--caramel);
+      color: #fff;
+      padding: 3px 8px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+    .hud-actions {
+      display: flex;
+      gap: 12px;
+    }
+    .hud-btn {
+      background: var(--bg-cream-alpha);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      color: var(--choco-dark);
+      padding: 10px 18px;
+      border-radius: 30px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: var(--shadow-soft);
+      transition: var(--transition);
+    }
+    .hud-btn:hover {
+      background: #fff;
+      transform: translateY(-2px);
+      color: var(--caramel);
+    }
+    .badge-count {
+      background: var(--caramel);
+      color: #fff;
+      font-size: 11px;
+      min-width: 20px;
+      height: 20px;
+      border-radius: 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 6px;
+    }
+
+    /* HUD Helper Footer */
+    .hud-footer {
+      position: fixed;
+      bottom: 24px;
+      left: 24px;
+      z-index: 20;
+      display: flex;
+      gap: 12px;
+      pointer-events: none;
+    }
+    .control-hint {
+      background: rgba(42, 23, 17, 0.75);
+      backdrop-filter: blur(8px);
+      color: #EDE4D8;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .key-badge {
+      background: rgba(255, 255, 255, 0.2);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: #fff;
+      font-weight: 700;
+      font-family: monospace;
+    }
+
+    /* Onscreen Joystick for Mobile */
+    #mobile-controls {
+      position: fixed;
+      bottom: 24px;
+      left: 24px;
+      right: 24px;
+      z-index: 25;
+      display: none;
+      justify-content: space-between;
+      align-items: flex-end;
+      pointer-events: none;
+    }
+    .joystick-zone {
+      width: 120px;
+      height: 120px;
+      background: rgba(255, 255, 255, 0.2);
+      border: 2px solid rgba(255, 255, 255, 0.4);
+      border-radius: 50%;
+      position: relative;
+      pointer-events: auto;
+      touch-action: none;
+    }
+    .joystick-knob {
+      width: 50px;
+      height: 50px;
+      background: var(--bg-cream);
+      border-radius: 50%;
+      position: absolute;
+      top: 35px;
+      left: 35px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      pointer-events: none;
+    }
+    .mobile-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: auto;
+    }
+    .mobile-action-btn {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--caramel);
+      color: #fff;
+      border: none;
+      font-size: 14px;
+      font-weight: 700;
+      box-shadow: var(--shadow-soft);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Modals & Overlays */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(42, 23, 17, 0.65);
+      backdrop-filter: blur(10px);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .modal-card {
+      background: var(--bg-cream);
+      border-radius: var(--radius-lg);
+      max-width: 680px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: var(--shadow-elevated);
+      position: relative;
+      transform: translateY(20px);
+      transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      user-select: text;
+    }
+    .modal-overlay.open .modal-card {
+      transform: translateY(0);
+    }
+    .modal-close {
+      position: absolute;
+      top: 18px;
+      right: 18px;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(74, 46, 37, 0.08);
+      border: none;
+      font-size: 20px;
+      color: var(--choco-dark);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition);
+      z-index: 10;
+    }
+    .modal-close:hover {
+      background: rgba(74, 46, 37, 0.18);
+    }
+
+    /* Product Showcase Card */
+    .product-modal-content {
+      display: grid;
+      grid-template-columns: 1fr 1.1fr;
+    }
+    .product-modal-img {
+      position: relative;
+      background: #E8DCCF;
+      min-height: 340px;
+      overflow: hidden;
+    }
+    .product-modal-img img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .product-modal-info {
+      padding: 32px 28px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .prod-category-badge {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--caramel);
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .prod-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--choco-dark);
+      margin-bottom: 8px;
+      line-height: 1.3;
+    }
+    .prod-price {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--caramel);
+      margin-bottom: 16px;
+    }
+    .prod-desc {
+      color: #6B554D;
+      font-size: 14px;
+      line-height: 1.6;
+      margin-bottom: 16px;
+    }
+    .prod-meta-box {
+      background: rgba(255, 255, 255, 0.65);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      margin-bottom: 20px;
+      font-size: 12.5px;
+      color: #553D35;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .qty-control {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .qty-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 1px solid var(--caramel);
+      background: #fff;
+      color: var(--caramel);
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .qty-val {
+      font-size: 16px;
+      font-weight: 700;
+      min-width: 24px;
+      text-align: center;
+    }
+    .btn-primary {
+      background: var(--choco-dark);
+      color: #fff;
+      border: none;
+      padding: 14px 24px;
+      border-radius: 30px;
+      font-weight: 600;
+      font-size: 15px;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+    }
+    .btn-primary:hover {
+      background: var(--caramel);
+      transform: translateY(-2px);
+    }
+
+    /* Menu & Catalog Modal */
+    .catalog-modal-content {
+      padding: 32px;
+    }
+    .catalog-header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .catalog-header h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 28px;
+      color: var(--choco-dark);
+    }
+    .cat-tabs {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+    }
+    .cat-tab-btn {
+      background: rgba(255,255,255,0.7);
+      border: 1px solid rgba(74, 46, 37, 0.15);
+      padding: 8px 18px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--choco-dark);
+      transition: var(--transition);
+    }
+    .cat-tab-btn.active, .cat-tab-btn:hover {
+      background: var(--choco-dark);
+      color: #fff;
+      border-color: var(--choco-dark);
+    }
+    .catalog-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 20px;
+      max-height: 55vh;
+      overflow-y: auto;
+      padding-right: 6px;
+    }
+    .catalog-card {
+      background: #fff;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      border: 1px solid rgba(0,0,0,0.05);
+      display: flex;
+      flex-direction: column;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .catalog-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-soft);
+    }
+    .catalog-card-img {
+      height: 140px;
+      overflow: hidden;
+      background: #EDE4D8;
+    }
+    .catalog-card-img img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .catalog-card-body {
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      justify-content: space-between;
+    }
+    .catalog-card-title {
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--choco-dark);
+      margin-bottom: 6px;
+    }
+    .catalog-card-price {
+      font-weight: 700;
+      color: var(--caramel);
+      font-size: 14px;
+    }
+
+    /* Cart & Checkout */
+    .cart-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 0;
+      border-bottom: 1px dashed rgba(74, 46, 37, 0.2);
+    }
+    .cart-item-img {
+      width: 60px;
+      height: 60px;
+      border-radius: 8px;
+      object-fit: cover;
+      background: #ddd;
+    }
+    .cart-item-details {
+      flex: 1;
+    }
+    .cart-item-name {
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--choco-dark);
+    }
+    .cart-item-price {
+      color: var(--caramel);
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .cart-remove-btn {
+      background: none;
+      border: none;
+      color: #999;
+      cursor: pointer;
+      font-size: 18px;
+      padding: 4px;
+    }
+    .cart-remove-btn:hover {
+      color: #c00;
+    }
+    .cart-summary {
+      background: rgba(255,255,255,0.7);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      margin: 20px 0;
+    }
+    .cart-summary-line {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    .cart-summary-total {
+      border-top: 1px solid rgba(74, 46, 37, 0.2);
+      padding-top: 8px;
+      font-weight: 700;
+      font-size: 16px;
+      color: var(--choco-dark);
+    }
+
+    /* Form Fields */
+    .form-group {
+      margin-bottom: 14px;
+    }
+    .form-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: var(--choco-dark);
+    }
+    .form-input, .form-textarea, .form-select {
+      width: 100%;
+      padding: 11px 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(74, 46, 37, 0.25);
+      background: #fff;
+      font-family: inherit;
+      font-size: 14px;
+      color: var(--choco-dark);
+      outline: none;
+      transition: var(--transition);
+    }
+    .form-input:focus, .form-textarea:focus {
+      border-color: var(--caramel);
+      box-shadow: 0 0 0 3px rgba(185, 130, 82, 0.15);
+    }
+
+    /* Intro / Splash Screen */
+    #intro-screen {
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(135deg, #2A1711 0%, #4A2E25 100%);
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      text-align: center;
+      padding: 30px;
+      transition: opacity 0.8s ease, visibility 0.8s;
+    }
+    #intro-screen.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+    .intro-logo {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(36px, 6vw, 64px);
+      font-weight: 700;
+      letter-spacing: 3px;
+      margin-bottom: 8px;
+      color: var(--bg-cream);
+      text-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    }
+    .intro-sub {
+      font-size: 16px;
+      color: var(--pastel-pink);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 30px;
+    }
+    .intro-desc {
+      max-width: 540px;
+      font-size: 15px;
+      line-height: 1.7;
+      color: #EDE4D8;
+      margin-bottom: 36px;
+      font-weight: 300;
+    }
+    .intro-btn {
+      background: var(--caramel);
+      color: #fff;
+      border: none;
+      padding: 16px 42px;
+      border-radius: 40px;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      cursor: pointer;
+      box-shadow: 0 10px 30px rgba(185, 130, 82, 0.4);
+      transition: var(--transition);
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .intro-btn:hover {
+      background: #D9A066;
+      transform: translateY(-3px) scale(1.02);
+      box-shadow: 0 14px 40px rgba(185, 130, 82, 0.6);
+    }
+    .intro-tips {
+      margin-top: 30px;
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.5);
+      display: flex;
+      gap: 20px;
+    }
+
+    /* Toast Notification */
+    #toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: var(--choco-dark);
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 30px;
+      font-size: 14px;
+      font-weight: 500;
+      z-index: 300;
+      box-shadow: var(--shadow-elevated);
+      transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      pointer-events: none;
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+    #toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .product-modal-content {
+        grid-template-columns: 1fr;
+      }
+      .product-modal-img {
+        min-height: 200px;
+        max-height: 240px;
+      }
+      .control-hint {
+        display: none;
+      }
+      #mobile-controls {
+        display: flex;
+      }
+      .hud-header {
+        top: 14px;
+        left: 14px;
+        right: 14px;
+      }
+      .brand-title {
+        font-size: 15px;
+      }
+    }
+  </style>
+
+  <!-- Thư viện Three.js ổn định từ CDN uy tín -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+  <!-- Khung WebGL Canvas hiển thị không gian 3D -->
+  <canvas id="webgl-canvas"></canvas>
+
+  <!-- Điểm ngắm tương tác First-Person -->
+  <div id="crosshair"></div>
+  <div id="interaction-prompt">Nhấn [E] hoặc Chạm để xem bánh</div>
+
+  <!-- HUD Header -->
+  <div class="hud-header">
+    <div class="brand-badge">
+      <span class="brand-title" id="hud-brand-title">PETIT FOUR</span>
+      <span class="brand-tag">Artisan 3D</span>
+    </div>
+
+    <div class="hud-actions">
+      <button class="hud-btn" id="btn-open-menu" title="Mở thực đơn">
+        <span>📖 Menu</span>
+      </button>
+      <button class="hud-btn" id="btn-open-cart" title="Xem giỏ hàng">
+        <span>🛒 Giỏ</span>
+        <span class="badge-count" id="cart-counter">0</span>
+      </button>
+      <button class="hud-btn" id="btn-toggle-sound" title="Bật/Tắt âm thanh">
+        <span id="sound-icon">🔇</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- HUD Footer Hints -->
+  <div class="hud-footer">
+    <div class="control-hint">
+      <span class="key-badge">W A S D</span> Di chuyển
+    </div>
+    <div class="control-hint">
+      <span class="key-badge">Chuột</span> Nhìn xung quanh
+    </div>
+    <div class="control-hint">
+      <span class="key-badge">E</span> hoặc <span class="key-badge">Click</span> Tương tác
+    </div>
+    <div class="control-hint">
+      <span class="key-badge">ESC</span> Mở chuột
+    </div>
+  </div>
+
+  <!-- Joystick ảo cho điện thoại di động -->
+  <div id="mobile-controls">
+    <div class="joystick-zone" id="joystick-zone">
+      <div class="joystick-knob" id="joystick-knob"></div>
+    </div>
+    <div class="mobile-actions">
+      <button class="mobile-action-btn" id="mobile-interact-btn">E</button>
+      <button class="mobile-action-btn" id="mobile-checkout-btn">💳</button>
+    </div>
+  </div>
+
+  <!-- Màn hình giới thiệu ban đầu (Splash Screen) -->
+  <div id="intro-screen">
+    <div class="intro-logo" id="intro-brand-name">PETIT FOUR</div>
+    <div class="intro-sub" id="intro-brand-sub">ARTISAN BAKERY & TEA HOUSE</div>
+    <p class="intro-desc">
+      Chào mừng bạn đến với trải nghiệm mua bánh 3D tương tác. Hãy bước vào tiệm, cảm nhận ánh sáng ấm áp, hương bánh nướng mới mỗi sáng và tự tay lựa chọn những chiếc bánh tinh xảo nhất.
+    </p>
+    <button class="intro-btn" id="btn-enter-store">
+      <span>BƯỚC VÀO TIỆM BÁNH</span>
+      <span>➔</span>
+    </button>
+    <div class="intro-tips">
+      <span>✨ Không gian 3D First-Person</span>
+      <span>🥐 Bánh nướng thủ công</span>
+      <span>💳 Đặt & Thanh toán trực tiếp</span>
+    </div>
+  </div>
+
+  <!-- Modal 1: Chi tiết sản phẩm bánh 3D -->
+  <div class="modal-overlay" id="modal-product">
+    <div class="modal-card">
+      <button class="modal-close" data-close="modal-product">&times;</button>
+      <div class="product-modal-content">
+        <div class="product-modal-img">
+          <img id="detail-img" src="" alt="Hình bánh">
+        </div>
+        <div class="product-modal-info">
+          <div>
+            <div class="prod-category-badge" id="detail-category">PASTRY</div>
+            <h3 class="prod-title" id="detail-name">Croissant Bơ Pháp</h3>
+            <div class="prod-price" id="detail-price">45.000 đ</div>
+            <p class="prod-desc" id="detail-desc">Mô tả bánh...</p>
+            
+            <div class="prod-meta-box">
+              <div><strong>Hương vị:</strong> <span id="detail-flavor">Béo nhẹ, vỏ giòn ruột xốp</span></div>
+              <div><strong>Nguyên liệu:</strong> <span id="detail-ingredients">Bơ Pháp Elle & Vire, Bột T55</span></div>
+              <div><strong>Trọng lượng:</strong> <span id="detail-weight">90g</span></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="qty-control">
+              <span style="font-weight: 600; font-size: 14px;">Số lượng:</span>
+              <button class="qty-btn" id="qty-minus">-</button>
+              <span class="qty-val" id="qty-count">1</span>
+              <button class="qty-btn" id="qty-plus">+</button>
+            </div>
+            <button class="btn-primary" id="btn-add-to-cart">
+              <span>Thêm vào giỏ hàng</span>
+              <span id="detail-btn-price">45.000 đ</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: Bảng Menu tương tác & Tìm kiếm -->
+  <div class="modal-overlay" id="modal-catalog">
+    <div class="modal-card" style="max-width: 860px;">
+      <button class="modal-close" data-close="modal-catalog">&times;</button>
+      <div class="catalog-modal-content">
+        <div class="catalog-header">
+          <h2>Thực Đơn Tiệm Bánh</h2>
+          <p style="color:#776; font-size:14px; margin-top:4px;">Những mẻ bánh thủ công tươi mới nướng mỗi ngày</p>
+        </div>
+
+        <div class="cat-tabs" id="catalog-category-tabs">
+          <!-- Đổ động từ API hoặc danh mục mặc định -->
+        </div>
+
+        <div class="catalog-grid" id="catalog-products-grid">
+          <!-- Đổ động danh sách bánh -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 3: Giỏ hàng & Checkout Quầy Thu Ngân -->
+  <div class="modal-overlay" id="modal-checkout">
+    <div class="modal-card" style="max-width: 620px; padding: 32px;">
+      <button class="modal-close" data-close="modal-checkout">&times;</button>
+      <div class="catalog-header" style="margin-bottom: 20px;">
+        <h2>Quầy Thu Ngân & Đặt Hàng</h2>
+        <p style="color:#776; font-size:13px;">Xác nhận đơn và nhận bánh tươi ngay tại nhà hoặc tại tiệm</p>
+      </div>
+
+      <!-- Danh sách món đã chọn -->
+      <div id="cart-items-container" style="max-height: 240px; overflow-y: auto; margin-bottom: 16px;">
+        <!-- Đổ động giỏ hàng -->
+      </div>
+
+      <!-- Tổng hóa đơn -->
+      <div class="cart-summary">
+        <div class="cart-summary-line">
+          <span>Tiền bánh:</span>
+          <span id="summary-subtotal" style="font-weight:600;">0 đ</span>
+        </div>
+        <div class="cart-summary-line">
+          <span>Phí giao hàng:</span>
+          <span id="summary-shipping" style="font-weight:600;">0 đ</span>
+        </div>
+        <div class="cart-summary-line cart-summary-total">
+          <span>TỔNG CỘNG:</span>
+          <span id="summary-total" style="color:var(--caramel);">0 đ</span>
+        </div>
+      </div>
+
+      <!-- Form thông tin khách -->
+      <form id="checkout-form">
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+          <div class="form-group">
+            <label class="form-label">Tên của bạn *</label>
+            <input type="text" class="form-input" id="cust-name" required placeholder="Ví dụ: Lê Minh Trí">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Số điện thoại *</label>
+            <input type="tel" class="form-input" id="cust-phone" required placeholder="0988xxxxxx">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Phương thức nhận bánh</label>
+          <select class="form-select" id="cust-delivery-method">
+            <option value="pickup">Đến lấy tại tiệm bánh (Miễn phí)</option>
+            <option value="delivery">Giao tận nơi (+25.000 đ)</option>
+          </select>
+        </div>
+
+        <div class="form-group" id="address-group" style="display:none;">
+          <label class="form-label">Địa chỉ nhận bánh</label>
+          <input type="text" class="form-input" id="cust-address" placeholder="Số nhà, tên đường, phường, quận...">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Ghi chú cho Baker</label>
+          <input type="text" class="form-input" id="cust-note" placeholder="Cắt sẵn, thắt nơ quà tặng, viết thiệp...">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Phương thức thanh toán</label>
+          <select class="form-select" id="cust-payment-method">
+            <option value="transfer">Chuyển khoản VietQR (Khuyên dùng)</option>
+            <option value="cod">Thanh toán khi nhận bánh</option>
+          </select>
+        </div>
+
+        <button type="submit" class="btn-primary" id="btn-submit-order" style="margin-top: 20px;">
+          <span>Gửi Đơn Đặt Bánh</span>
+          <span>➔</span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 4: Đặt Hàng Thành Công & Mã QR Thanh Toán -->
+  <div class="modal-overlay" id="modal-success">
+    <div class="modal-card" style="max-width: 520px; padding: 32px; text-align: center;">
+      <button class="modal-close" data-close="modal-success">&times;</button>
+      <div style="font-size: 48px; margin-bottom: 12px;">🎉</div>
+      <h3 style="font-family:'Playfair Display',serif; font-size:24px; color:var(--choco-dark); margin-bottom:8px;">Đặt Bánh Thành Công!</h3>
+      <p style="font-size: 14px; color: #666; margin-bottom: 16px;">
+        Mã đơn hàng của bạn: <strong id="success-order-id" style="color:var(--caramel);">PF-2026-XXXX</strong>
+      </p>
+
+      <div id="transfer-instruction-box" style="background:#FFF9F2; border:1px solid #E4D5C5; border-radius:var(--radius-sm); padding:16px; margin-bottom:20px; text-align:left;">
+        <div style="font-weight:700; color:var(--choco-dark); margin-bottom:8px; font-size:14px; text-align:center;">
+          QUÉT MÃ VIETQR ĐỂ HOÀN TẤT
+        </div>
+        <div style="text-align:center; margin-bottom:12px;">
+          <img id="success-qr-img" src="" alt="QR Thanh toán" style="max-width: 180px; border-radius:8px; border:1px solid #ddd;">
+        </div>
+        <div style="font-size:13px; line-height:1.6; color:#554;">
+          <div>• Ngân hàng: <strong id="success-bank-name">Vietcombank</strong></div>
+          <div>• Số tài khoản: <strong id="success-bank-acc">0011004567890</strong></div>
+          <div>• Chủ tài khoản: <strong id="success-bank-holder">PETIT FOUR BAKERY</strong></div>
+          <div>• Số tiền: <strong id="success-total-val" style="color:var(--caramel);">0 đ</strong></div>
+          <div>• Nội dung: <strong id="success-transfer-memo">PF-XXXX</strong></div>
+        </div>
+        <p style="font-size:11.5px; color:#888; margin-top:10px; font-style:italic; text-align:center;">
+          * Đơn hàng sẽ được nhân viên tiệm gọi xác nhận và nướng bánh ngay sau khi nhận được chuyển khoản.
+        </p>
+      </div>
+
+      <div style="display:flex; gap:10px;">
+        <button class="btn-primary" id="btn-back-to-bakery" style="background:var(--caramel);">
+          Tiếp tục dạo tiệm 3D
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast thông báo nhỏ -->
+  <div id="toast">Thông báo</div>
+
+  <!-- Nạp file logic chính app.js -->
+  <script src="app.js"></script>
+</body>
+</html>
