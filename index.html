@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>PETIT FOUR — Tiệm bánh Artisan, xoay 360° trước khi đặt</title>
-  <meta name="description" content="Xoay từng chiếc bánh thủ công trong không gian 3D rồi đặt ngay: giao tận nơi, đặt qua beFood, GrabFood, ShopeeFood, Xanh SM hoặc đến lấy tại tiệm.">
-  <meta name="theme-color" content="#2B1B2E">
+  <title>PETIT FOUR — Tiệm bánh Artisan, xoay thử trước khi chọn</title>
+  <meta name="description" content="Xoay từng chiếc bánh thủ công trong không gian 3D, chạm vào nguyên liệu rồi đặt ngay: giao tận nơi, đặt qua beFood, GrabFood, ShopeeFood, Xanh SM hoặc đến lấy tại tiệm.">
+  <meta name="theme-color" content="#1B1020">
   <meta property="og:title" content="PETIT FOUR — Tiệm bánh Artisan">
   <meta property="og:description" content="Xoay 360° từng chiếc bánh thủ công và đặt hàng trực tuyến.">
   <meta property="og:type" content="website">
@@ -21,17 +21,21 @@
       --ink-soft: #6A5870;
       --berry: #C2255C;
       --berry-dark: #9E1B4A;
+      --berry-light: #FF7BA5;
       --pistachio: #CFE0B8;
-      --tint: #F6DCE2;
+      --night: #1B1020;
+      --night-2: #3A2340;
       --line: rgba(43, 27, 46, 0.14);
+      --glow: #E8457C;
       --font-display: 'Bricolage Grotesque', 'Be Vietnam Pro', system-ui, sans-serif;
       --font-body: 'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', sans-serif;
       --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
-      --header-h: 64px;
+      --header-h: 60px;
+      --bar-h: 58px;
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; scroll-padding-top: calc(var(--header-h) + 8px); -webkit-text-size-adjust: 100%; }
+    html { scroll-padding-top: calc(var(--header-h) + 8px); -webkit-text-size-adjust: 100%; }
     body {
       font-family: var(--font-body);
       font-size: 15px;
@@ -39,158 +43,202 @@
       color: var(--ink);
       background: var(--paper);
       -webkit-tap-highlight-color: transparent;
+      overflow-x: clip;
+      min-width: 0;
     }
     body.modal-open { overflow: hidden; }
     img { display: block; max-width: 100%; }
     button { font: inherit; color: inherit; cursor: pointer; border: none; background: none; }
     a { color: inherit; text-decoration: none; }
-    :focus-visible { outline: 3px solid var(--berry); outline-offset: 3px; border-radius: 6px; }
+    :focus-visible { outline: 3px solid var(--berry-light); outline-offset: 3px; border-radius: 6px; }
     .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
     svg.ic { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
 
     /* ---------- Header ---------- */
     .site-header {
-      position: fixed; inset: 0 0 auto 0; height: var(--header-h); z-index: 50;
-      display: flex; align-items: center; justify-content: space-between; gap: 16px;
-      padding: 0 max(20px, env(safe-area-inset-right)) 0 max(20px, env(safe-area-inset-left));
-      background: rgba(251, 247, 247, 0.82);
-      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-      transition: box-shadow 0.3s;
+      position: fixed; inset: 0 0 auto 0; height: var(--header-h); z-index: 60;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      padding: 0 max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
+      color: #fff; background: transparent;
+      transition: background 0.3s, color 0.3s, box-shadow 0.3s;
     }
-    .site-header.scrolled { box-shadow: 0 1px 0 var(--line); }
-    .logo { font-family: var(--font-display); font-weight: 800; font-size: 22px; letter-spacing: 0.02em; display: flex; align-items: baseline; gap: 10px; }
-    .logo small { font-family: var(--font-body); font-size: 12px; font-weight: 500; color: var(--ink-soft); letter-spacing: 0; display: none; }
+    .site-header.scrolled {
+      color: var(--ink); background: rgba(251, 247, 247, 0.88);
+      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+      box-shadow: 0 1px 0 var(--line);
+    }
+    .logo { font-family: var(--font-display); font-weight: 800; font-size: 21px; letter-spacing: 0.03em; display: flex; align-items: baseline; gap: 10px; white-space: nowrap; }
+    .logo small { font-family: var(--font-body); font-size: 12px; font-weight: 500; opacity: 0.7; letter-spacing: 0; display: none; }
     .nav { display: none; gap: 28px; font-weight: 600; font-size: 14px; }
     .nav a { padding: 6px 0; border-bottom: 2px solid transparent; transition: border-color 0.2s; }
-    .nav a:hover { border-color: var(--berry); }
+    .nav a:hover { border-color: var(--berry-light); }
     .header-actions { display: flex; gap: 8px; align-items: center; }
     .icon-btn {
       position: relative; width: 44px; height: 44px; border-radius: 50%;
       display: inline-flex; align-items: center; justify-content: center;
-      background: var(--paper-2); transition: background 0.2s;
+      background: rgba(255, 255, 255, 0.14); color: inherit; transition: background 0.2s;
     }
-    .icon-btn:hover { background: var(--pistachio); }
-    .cart-btn { width: auto; padding: 0 16px 0 14px; gap: 8px; border-radius: 24px; background: var(--ink); color: #fff; font-weight: 600; font-size: 14px; }
-    .cart-btn:hover { background: var(--berry); }
+    .icon-btn:hover { background: rgba(255, 255, 255, 0.26); }
+    .site-header.scrolled .icon-btn { background: var(--paper-2); }
+    .site-header.scrolled .icon-btn:hover { background: var(--pistachio); }
+    .cart-btn { width: auto; padding: 0 14px; gap: 8px; border-radius: 24px; background: var(--berry) !important; color: #fff !important; font-weight: 600; font-size: 14px; }
+    .cart-btn:hover { background: var(--berry-dark) !important; }
     .badge-count {
       min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px;
       background: #fff; color: var(--ink); font-size: 12px; font-weight: 700;
       display: inline-flex; align-items: center; justify-content: center;
     }
+    .badge-count.pop { animation: pop 0.45s var(--ease); }
+    @keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.55); } 100% { transform: scale(1); } }
+    .cart-label { display: none; }
     .snd-off, .snd-on { display: none; }
     #btn-toggle-sound[aria-pressed="false"] .snd-off { display: block; }
     #btn-toggle-sound[aria-pressed="true"] .snd-on { display: block; }
 
-    /* ---------- Hero (3D showroom) ---------- */
-    .hero {
-      display: grid; padding-top: var(--header-h);
-      grid-template-columns: 1fr;
-      grid-template-areas: "stage" "panel" "rail";
+    /* ---------- Hero: cảnh điện ảnh cuộn trang ---------- */
+    .hero { position: relative; height: 215vh; height: 215svh; background: var(--night); }
+    .hero-pin {
+      position: sticky; top: 0; height: 100vh; height: 100svh; overflow: hidden; color: #fff;
+      padding-top: var(--header-h); padding-bottom: calc(var(--bar-h) + env(safe-area-inset-bottom));
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: minmax(0, 1fr) auto auto;
+      grid-template-areas: "stage" "left" "rail";
+      background:
+        radial-gradient(70% 55% at 50% 38%, var(--night-2) 0%, rgba(58, 35, 64, 0) 70%),
+        linear-gradient(180deg, #24132B 0%, var(--night) 100%);
     }
-    .stage {
-      grid-area: stage; position: relative; overflow: hidden;
-      height: min(58svh, 520px); min-height: 330px;
-      background-color: var(--tint); transition: background-color 0.7s ease;
+    .glow {
+      position: absolute; left: 50%; top: 42%; width: min(80vmin, 760px); height: min(80vmin, 760px);
+      transform: translate(-50%, -50%); border-radius: 50%; pointer-events: none;
+      background: var(--glow); opacity: 0.34; filter: blur(80px);
+      transition: background-color 0.9s ease; z-index: 0;
     }
-    .stage::before {
-      content: ''; position: absolute; inset: 0; pointer-events: none;
-      background: radial-gradient(58% 52% at 50% 60%, rgba(255,255,255,0.9), rgba(255,255,255,0) 72%);
+    .wordmark {
+      position: absolute; left: 0; right: 0; top: calc(var(--header-h) + 1vh); z-index: 0; pointer-events: none;
+      text-align: center; white-space: nowrap; overflow: hidden;
+      font-family: var(--font-display); font-weight: 800; line-height: 0.9; letter-spacing: -0.03em;
+      font-size: 15vw; color: rgba(255, 255, 255, 0.04); -webkit-text-stroke: 1.5px rgba(255, 255, 255, 0.2);
+      transform: translateY(calc(var(--p, 0) * -7vh)) scale(calc(1 + var(--p, 0) * 0.05));
+      opacity: calc(1 - var(--p, 0) * 0.55);
     }
-    .stage-ghost {
-      position: absolute; left: 0; right: 0; top: 6%; z-index: 0;
-      text-align: center; padding: 0 12px; pointer-events: none;
-      font-family: var(--font-display); font-weight: 800; line-height: 0.92;
-      font-size: clamp(56px, 15vw, 190px); color: rgba(255, 255, 255, 0.62);
-      letter-spacing: -0.02em; transition: opacity 0.3s;
-    }
-    .stage-ghost.swap { opacity: 0; }
-    #stage-canvas {
-      position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1;
-      touch-action: pan-y; cursor: grab; display: block; outline: none;
-    }
+
+    .stage { grid-area: stage; position: relative; min-width: 0; min-height: 0; z-index: 1; }
+    #stage-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: pan-y; cursor: grab; outline: none; }
     #stage-canvas.grabbing { cursor: grabbing; }
-    .stage-fallback { position: absolute; inset: 14% 18%; z-index: 1; display: none; }
-    .stage-fallback img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; box-shadow: 0 24px 50px rgba(43,27,46,0.25); }
+    .stage-fallback { position: absolute; inset: 12% 18%; display: none; }
+    .stage-fallback img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5); }
     .stage.no-webgl .stage-fallback { display: block; }
     .stage.no-webgl #stage-canvas, .stage.no-webgl .stage-tools { display: none; }
+    .hotspots { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 3; }
+    .hs { position: absolute; left: 0; top: 0; width: 0; height: 0; opacity: 0; pointer-events: none; transition: opacity 0.3s; will-change: transform; }
+    .hs-dot { position: absolute; left: -9px; top: -9px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.25), 0 4px 14px rgba(0, 0, 0, 0.4); }
+    .hs-dot::after { content: ''; position: absolute; inset: -9px; border-radius: 50%; border: 1.5px solid rgba(255, 255, 255, 0.7); animation: ping 2.2s ease-out infinite; }
+    @keyframes ping { 0% { transform: scale(0.6); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
+    .hs-label {
+      position: absolute; left: 18px; top: -14px; white-space: nowrap; max-width: 170px; overflow: hidden; text-overflow: ellipsis;
+      padding: 6px 12px; border-radius: 16px; font-size: 12px; font-weight: 600; line-height: 1.3;
+      background: rgba(27, 16, 32, 0.72); border: 1px solid rgba(255, 255, 255, 0.22); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    }
+    .hs.open .hs-label { max-width: 260px; white-space: normal; z-index: 2; }
+
+    .polaroid {
+      position: absolute; right: 12px; top: 8px; z-index: 2; width: 84px; padding: 5px 5px 14px; background: #fff; color: var(--ink);
+      border-radius: 6px; box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45); transform: rotate(4deg);
+      opacity: var(--panel, 0); pointer-events: none; font-size: 9px; font-weight: 700; text-align: center;
+    }
+    .polaroid img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 3px; margin-bottom: 4px; background: var(--paper-2); }
+    .polaroid.swap img { animation: polaroidIn 0.6s var(--ease); }
+    @keyframes polaroidIn { from { opacity: 0; transform: scale(1.12); } to { opacity: 1; transform: none; } }
+    .polaroid figcaption { display: none; }
+
     .stage-hint {
-      position: absolute; left: 16px; bottom: 14px; z-index: 2;
-      display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px;
-      background: rgba(43, 27, 46, 0.78); color: #fff; border-radius: 20px; font-size: 12.5px;
-      pointer-events: none; transition: opacity 0.5s;
+      position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); z-index: 4; white-space: nowrap;
+      display: inline-flex; align-items: center; gap: 8px; padding: 7px 14px; border-radius: 20px; font-size: 12px;
+      background: rgba(255, 255, 255, 0.14); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      pointer-events: none; transition: opacity 0.5s; opacity: 1;
     }
     .stage-hint.gone { opacity: 0; }
-    .stage-tools { position: absolute; right: 14px; bottom: 12px; z-index: 2; display: flex; gap: 8px; }
-    .stage-tools .icon-btn { background: rgba(255,255,255,0.85); width: 40px; height: 40px; }
-    .stage-tools .icon-btn:hover { background: #fff; }
-    .stage-arrow { position: absolute; top: 50%; transform: translateY(-50%); z-index: 2; background: rgba(255,255,255,0.85); }
-    .stage-arrow:hover { background: #fff; }
-    .stage-arrow.prev { left: 12px; }
-    .stage-arrow.next { right: 12px; }
+    .stage-tools { position: absolute; right: 10px; bottom: 6px; z-index: 4; display: none; gap: 8px; opacity: var(--panel, 0); }
+    .stage-tools .icon-btn { width: 40px; height: 40px; }
+    .stage-arrow { position: absolute; top: 50%; transform: translateY(-50%); z-index: 4; width: 38px; height: 38px; opacity: var(--panel, 0); }
+    .stage-arrow.prev { left: 8px; }
+    .stage-arrow.next { right: 8px; }
+    .hero-pin:not(.picking) .stage-arrow, .hero-pin:not(.picking) .stage-tools { pointer-events: none; }
 
-    .panel { grid-area: panel; padding: 26px 20px 8px; display: flex; flex-direction: column; justify-content: center; }
-    .p-cat { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--ink-soft); margin-bottom: 10px; }
-    .p-cat::before { content: ''; width: 10px; height: 10px; border-radius: 50%; background: var(--pistachio); box-shadow: 0 0 0 2px var(--ink-soft) inset; }
-    .p-name { font-family: var(--font-display); font-weight: 800; font-size: clamp(30px, 4.2vw, 50px); line-height: 1.04; letter-spacing: -0.015em; margin-bottom: 10px; }
-    .p-price { font-family: var(--font-display); font-weight: 700; font-size: 26px; color: var(--berry); margin-bottom: 12px; }
-    .p-desc { color: var(--ink-soft); max-width: 46ch; margin-bottom: 18px; }
-    .p-meta { display: grid; grid-template-columns: auto 1fr; gap: 0 18px; margin-bottom: 20px; max-width: 520px; font-size: 13.5px; }
-    .p-meta dt { font-weight: 600; padding: 8px 0; border-top: 1px solid var(--line); }
-    .p-meta dd { padding: 8px 0; border-top: 1px solid var(--line); color: var(--ink-soft); }
-    .buy-row { display: flex; gap: 12px; align-items: stretch; flex-wrap: wrap; }
-    .qty { display: inline-flex; align-items: center; border: 1.5px solid var(--ink); border-radius: 30px; padding: 3px; }
-    .qty button { width: 40px; height: 40px; border-radius: 50%; font-size: 20px; font-weight: 600; transition: background 0.2s; }
-    .qty button:hover { background: var(--paper-2); }
-    .qty span { min-width: 30px; text-align: center; font-weight: 700; font-size: 16px; }
+    .left { grid-area: left; position: relative; z-index: 2; min-width: 0; display: grid; padding: 4px 18px 8px; }
+    .left > * { grid-area: 1 / 1; min-width: 0; }
+    .intro { align-self: center; opacity: var(--intro, 1); transform: translateY(calc((1 - var(--intro, 1)) * -18px)); }
+    .hero-pin.picking .intro { visibility: hidden; pointer-events: none; }
+    .intro h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(30px, 8.4vw, 68px); line-height: 1.02; letter-spacing: -0.02em; margin-bottom: 12px; }
+    .intro p { display: none; color: #D9CCDD; max-width: 44ch; margin-bottom: 20px; }
+    .intro-cta { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    .panel { align-self: center; opacity: var(--panel, 0); transform: translateY(calc((1 - var(--panel, 0)) * 18px)); }
+    .hero-pin:not(.picking) .panel { visibility: hidden; pointer-events: none; }
+    .p-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
+    .p-cat { font-size: 12.5px; font-weight: 600; color: #CDBFD2; }
+    .p-counter { font-size: 12px; font-weight: 600; color: #CDBFD2; font-variant-numeric: tabular-nums; }
+    .p-name { font-family: var(--font-display); font-weight: 800; font-size: clamp(24px, 6.6vw, 50px); line-height: 1.05; letter-spacing: -0.015em; margin-bottom: 6px; }
+    .p-priceline { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+    .p-price { font-family: var(--font-display); font-weight: 700; font-size: 24px; color: var(--berry-light); }
+    .p-stock { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 14px; background: #FFD84D; color: var(--ink); }
+    .p-stock[hidden] { display: none; }
+    .p-desc, .p-meta { display: none; }
+    .buy-row { display: flex; gap: 10px; align-items: stretch; }
+    .qty { display: inline-flex; align-items: center; border: 1.5px solid rgba(255, 255, 255, 0.5); border-radius: 30px; padding: 3px; flex: none; }
+    .qty button { width: 38px; height: 38px; border-radius: 50%; font-size: 20px; font-weight: 600; transition: background 0.2s; }
+    .qty button:hover { background: rgba(255, 255, 255, 0.14); }
+    .qty span { min-width: 26px; text-align: center; font-weight: 700; font-size: 16px; }
     .btn-primary {
       display: inline-flex; align-items: center; justify-content: center; gap: 12px;
       background: var(--berry); color: #fff; font-weight: 700; font-size: 15px;
-      padding: 0 26px; min-height: 52px; border-radius: 30px; flex: 1 1 220px;
+      padding: 0 22px; min-height: 50px; border-radius: 30px; flex: 1 1 auto; min-width: 0;
       transition: background 0.2s, transform 0.2s var(--ease);
     }
-    .btn-primary:hover { background: var(--berry-dark); transform: translateY(-2px); }
+    .btn-primary:hover { background: #E0306F; transform: translateY(-2px); }
     .btn-primary:disabled { opacity: 0.6; cursor: wait; transform: none; }
     .btn-ghost {
       display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-      min-height: 52px; padding: 0 22px; border-radius: 30px; border: 1.5px solid var(--ink);
+      min-height: 50px; padding: 0 22px; border-radius: 30px; border: 1.5px solid rgba(255, 255, 255, 0.55);
       font-weight: 600; transition: background 0.2s, color 0.2s;
     }
-    .btn-ghost:hover { background: var(--ink); color: #fff; }
-    .p-links { margin-top: 14px; font-size: 13.5px; color: var(--ink-soft); }
-    .p-links a { color: var(--berry); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+    .btn-ghost:hover { background: #fff; color: var(--ink); }
+    .intro-cta .btn-primary { flex: 0 1 auto; }
+    .p-links { display: none; }
 
-    .rail-wrap { grid-area: rail; border-top: 1px solid var(--line); background: var(--paper); }
-    .rail-head { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px 0; font-size: 13px; color: var(--ink-soft); font-weight: 500; }
-    .rail { display: flex; gap: 10px; overflow-x: auto; padding: 10px 20px 16px; scroll-snap-type: x proximity; scrollbar-width: thin; }
-    .thumb { flex: none; width: 84px; scroll-snap-align: start; text-align: center; font-size: 11.5px; line-height: 1.3; color: var(--ink-soft); }
-    .thumb img { width: 72px; height: 72px; margin: 0 auto 6px; object-fit: cover; border-radius: 22px; border: 2.5px solid transparent; background: var(--paper-2); transition: border-color 0.2s, transform 0.2s var(--ease); }
+    .rail-wrap { grid-area: rail; min-width: 0; z-index: 2; border-top: 1px solid rgba(255, 255, 255, 0.1); background: rgba(20, 10, 26, 0.55); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+    .rail { display: flex; gap: 8px; overflow-x: auto; max-width: 100%; padding: 8px 16px 8px; scroll-snap-type: x proximity; scrollbar-width: none; }
+    .rail::-webkit-scrollbar { display: none; }
+    .thumb { flex: none; width: 64px; scroll-snap-align: start; text-align: center; font-size: 10.5px; line-height: 1.25; color: #B9A9BF; }
+    .thumb img { width: 54px; height: 54px; margin: 0 auto 3px; object-fit: cover; border-radius: 18px; border: 2.5px solid transparent; background: #3A2340; transition: border-color 0.2s, transform 0.2s var(--ease); }
     .thumb:hover img { transform: translateY(-2px); }
-    .thumb.active img { border-color: var(--berry); }
-    .thumb.active { color: var(--ink); font-weight: 600; }
-    .thumb span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .thumb.active img { border-color: var(--berry-light); }
+    .thumb.active { color: #fff; font-weight: 600; }
+    .thumb span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
     /* ---------- Sections ---------- */
     .section { padding: 64px 20px; }
-    .section-inner { max-width: 1200px; margin: 0 auto; }
+    .section-inner { max-width: 1200px; margin: 0 auto; min-width: 0; }
     .section-title { font-family: var(--font-display); font-weight: 800; font-size: clamp(28px, 4.4vw, 44px); line-height: 1.08; letter-spacing: -0.015em; margin-bottom: 10px; }
     .section-sub { color: var(--ink-soft); max-width: 56ch; margin-bottom: 28px; }
 
-    .tabs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 24px; scrollbar-width: none; }
+    .tabs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 24px; scrollbar-width: none; max-width: 100%; }
     .tabs::-webkit-scrollbar { display: none; }
     .tab { flex: none; padding: 9px 18px; border-radius: 22px; font-weight: 600; font-size: 13.5px; background: var(--paper-2); transition: background 0.2s, color 0.2s; }
     .tab:hover { background: var(--pistachio); }
     .tab.active { background: var(--ink); color: #fff; }
 
-    .menu-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px 14px; }
-    .m-card { display: flex; flex-direction: column; }
+    .menu-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 14px; }
+    .m-card { display: flex; flex-direction: column; min-width: 0; }
     .m-img { position: relative; aspect-ratio: 4 / 5; overflow: hidden; border-radius: 28px 28px 8px 28px; background: var(--paper-2); display: block; width: 100%; }
     .m-img img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s var(--ease); }
     .m-img:hover img { transform: scale(1.05); }
-    .m-badge { position: absolute; left: 10px; top: 10px; background: rgba(255,255,255,0.92); font-size: 11.5px; font-weight: 700; padding: 4px 10px; border-radius: 14px; }
+    .m-badge { position: absolute; left: 10px; top: 10px; background: rgba(255, 255, 255, 0.92); font-size: 11.5px; font-weight: 700; padding: 4px 10px; border-radius: 14px; }
     .m-body { padding: 12px 2px 0; display: flex; flex-direction: column; gap: 4px; flex: 1; }
     .m-name { font-weight: 700; font-size: 14.5px; line-height: 1.35; }
     .m-flavor { font-size: 12.5px; color: var(--ink-soft); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-    .m-foot { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 8px; }
+    .m-foot { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 8px; gap: 6px; }
     .m-price { font-family: var(--font-display); font-weight: 700; color: var(--berry); font-size: 16px; }
     .m-actions { display: flex; gap: 6px; align-items: center; }
     .m-view { font-size: 12.5px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; padding: 8px 4px; }
@@ -198,18 +246,17 @@
     .m-add:hover { background: var(--berry); transform: scale(1.08); }
     .empty { grid-column: 1 / -1; padding: 30px; text-align: center; color: var(--ink-soft); }
 
-    /* Delivery apps */
-    .delivery { background: var(--ink); color: #fff; }
+    .delivery { background: var(--night); color: #fff; }
     .delivery .section-sub { color: #CDBFD2; }
-    .dl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .dl-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
     .dl-tile {
       display: flex; flex-direction: column; justify-content: space-between; gap: 22px;
       min-height: 132px; padding: 18px; border-radius: 24px; color: #fff;
       transition: transform 0.25s var(--ease), box-shadow 0.25s;
     }
-    .dl-tile:hover { transform: translateY(-4px); box-shadow: 0 14px 30px rgba(0,0,0,0.35); }
+    .dl-tile:hover { transform: translateY(-4px); box-shadow: 0 14px 30px rgba(0, 0, 0, 0.35); }
     .dl-name { font-family: var(--font-display); font-weight: 800; font-size: 24px; line-height: 1; }
-    .dl-state { display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 600; }
+    .dl-state { display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 600; gap: 6px; }
     .dl-be { background: #FFD84D; color: #2B1B2E; }
     .dl-grab { background: #00B14F; color: #06261A; }
     .dl-shopee { background: #D93A18; }
@@ -219,42 +266,39 @@
     .dl-note { margin-top: 18px; font-size: 13px; color: #CDBFD2; }
     .dl-note a { color: #fff; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
 
-    /* Contact */
-    .contact-grid { display: grid; gap: 32px; }
-    .info-list { display: grid; gap: 0; }
-    .info-row { display: grid; grid-template-columns: 110px 1fr; gap: 12px; padding: 14px 0; border-top: 1px solid var(--line); }
+    .contact-grid { display: grid; gap: 32px; grid-template-columns: minmax(0, 1fr); }
+    .info-list { display: grid; }
+    .info-row { display: grid; grid-template-columns: 100px minmax(0, 1fr); gap: 12px; padding: 14px 0; border-top: 1px solid var(--line); }
     .info-row dt { font-weight: 600; }
     .info-row dd { color: var(--ink-soft); }
     .info-row a { color: var(--berry); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
-    .social-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .social {
-      display: flex; align-items: center; gap: 12px; padding: 16px; border-radius: 22px;
-      background: var(--paper-2); font-weight: 700; transition: background 0.2s, transform 0.2s var(--ease);
-    }
+    .social-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .social { display: flex; align-items: center; gap: 12px; padding: 16px; border-radius: 22px; background: var(--paper-2); font-weight: 700; transition: background 0.2s, transform 0.2s var(--ease); }
     .social:hover { background: var(--pistachio); transform: translateY(-3px); }
     .social .ic { width: 24px; height: 24px; }
     .social.hidden { display: none; }
     .zalo-mark { width: 24px; height: 24px; border-radius: 7px; background: #0068FF; color: #fff; font-size: 10px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; flex: none; }
-    .site-footer { padding: 28px 20px calc(28px + 64px); text-align: center; color: var(--ink-soft); font-size: 13px; border-top: 1px solid var(--line); }
+    .site-footer { padding: 28px 20px calc(28px + var(--bar-h)); text-align: center; color: var(--ink-soft); font-size: 13px; border-top: 1px solid var(--line); }
 
-    /* Mobile bottom bar */
     .bottom-bar {
-      position: fixed; inset: auto 0 0 0; z-index: 45; display: grid; grid-template-columns: repeat(4, 1fr);
-      background: rgba(251,247,247,0.94); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+      position: fixed; inset: auto 0 0 0; z-index: 55; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+      background: rgba(251, 247, 247, 0.94); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
       border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom);
     }
-    .bar-item { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 58px; font-size: 11.5px; font-weight: 600; color: var(--ink); }
+    .bar-item { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; height: var(--bar-h); font-size: 11.5px; font-weight: 600; color: var(--ink); }
     .bar-item .badge-count { position: absolute; top: 6px; left: calc(50% + 6px); background: var(--berry); color: #fff; min-width: 18px; height: 18px; font-size: 10.5px; }
+
+    .fly { position: fixed; z-index: 400; width: 52px; height: 52px; border-radius: 50%; object-fit: cover; pointer-events: none; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4); border: 2px solid #fff; }
 
     /* ---------- Modals ---------- */
     .modal-overlay {
       position: fixed; inset: 0; z-index: 100; display: flex; align-items: flex-end; justify-content: center;
-      padding: 0; background: rgba(43,27,46,0.6); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+      background: rgba(27, 16, 32, 0.62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
       opacity: 0; visibility: hidden; transition: opacity 0.3s, visibility 0.3s;
     }
     .modal-overlay.open { opacity: 1; visibility: visible; }
     .modal-card {
-      position: relative; width: 100%; max-width: 640px; max-height: 92svh; overflow-y: auto;
+      position: relative; width: 100%; max-width: 640px; max-height: 92vh; max-height: 92svh; overflow-y: auto;
       background: var(--paper); border-radius: 28px 28px 0 0; padding: 28px 20px calc(24px + env(safe-area-inset-bottom));
       transform: translateY(40px); transition: transform 0.35s var(--ease);
     }
@@ -263,11 +307,12 @@
     .modal-close:hover { background: var(--pistachio); }
     .modal-title { font-family: var(--font-display); font-weight: 800; font-size: 26px; margin-bottom: 4px; padding-right: 44px; }
     .modal-sub { color: var(--ink-soft); font-size: 13.5px; margin-bottom: 18px; }
+    .modal-card .btn-primary { background: var(--berry); }
 
     .cart-list { max-height: 260px; overflow-y: auto; margin-bottom: 14px; }
     .cart-empty { text-align: center; padding: 24px 8px; color: var(--ink-soft); }
     .cart-item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px dashed var(--line); }
-    .cart-item img { width: 56px; height: 56px; border-radius: 14px; object-fit: cover; background: var(--paper-2); }
+    .cart-item img { width: 56px; height: 56px; border-radius: 14px; object-fit: cover; background: var(--paper-2); flex: none; }
     .ci-info { flex: 1; min-width: 0; }
     .ci-name { font-weight: 700; font-size: 14px; line-height: 1.3; }
     .ci-price { color: var(--berry); font-weight: 600; font-size: 13px; }
@@ -281,14 +326,14 @@
     .summary .total { border-top: 1px solid var(--line); margin-top: 6px; padding-top: 10px; font-weight: 800; font-size: 17px; }
     .summary .total span:last-child { color: var(--berry); }
 
-    .form-row { display: grid; grid-template-columns: 1fr; gap: 0 12px; }
+    .form-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 12px; }
     .form-group { margin-bottom: 14px; }
     .form-label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
     .form-input, .form-select {
       width: 100%; min-height: 46px; padding: 10px 14px; border-radius: 14px;
       border: 1.5px solid var(--line); background: #fff; font: inherit; font-size: 16px; color: var(--ink);
     }
-    .form-input:focus, .form-select:focus { outline: none; border-color: var(--berry); box-shadow: 0 0 0 3px rgba(194,37,92,0.15); }
+    .form-input:focus, .form-select:focus { outline: none; border-color: var(--berry); box-shadow: 0 0 0 3px rgba(194, 37, 92, 0.15); }
     .alt-order { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-soft); }
     .alt-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
     .alt-chip { padding: 8px 14px; border-radius: 18px; font-weight: 700; font-size: 13px; color: #fff; }
@@ -309,34 +354,60 @@
     .pay-note { font-size: 12px; color: var(--ink-soft); margin-top: 10px; text-align: center; font-style: italic; }
 
     #toast {
-      position: fixed; left: 50%; bottom: calc(76px + env(safe-area-inset-bottom)); z-index: 300;
+      position: fixed; left: 50%; bottom: calc(var(--bar-h) + 16px + env(safe-area-inset-bottom)); z-index: 300;
       transform: translate(-50%, 30px); opacity: 0; pointer-events: none;
       background: var(--ink); color: #fff; padding: 12px 22px; border-radius: 26px; font-size: 14px; font-weight: 500;
-      max-width: calc(100vw - 32px); text-align: center; box-shadow: 0 14px 40px rgba(43,27,46,0.35);
+      max-width: calc(100vw - 32px); text-align: center; box-shadow: 0 14px 40px rgba(43, 27, 46, 0.35);
       transition: transform 0.3s var(--ease), opacity 0.3s;
     }
     #toast.show { transform: translate(-50%, 0); opacity: 1; }
 
-    /* ---------- Tablet & Desktop ---------- */
+    /* ---------- Điện thoại ngang / máy tính bảng nhỏ ---------- */
     @media (min-width: 640px) {
-      .menu-grid { grid-template-columns: repeat(3, 1fr); gap: 32px 20px; }
-      .dl-grid { grid-template-columns: repeat(4, 1fr); }
-      .form-row { grid-template-columns: 1fr 1fr; }
+      .menu-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px 20px; }
+      .dl-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      .form-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .logo small { display: inline; }
+      .cart-label { display: inline; }
+      .intro p { display: block; }
+      .polaroid { width: 120px; top: 12px; right: 16px; padding: 6px 6px 18px; font-size: 11px; }
+      .polaroid figcaption { display: block; }
     }
+
+    /* ---------- Máy tính ---------- */
     @media (min-width: 900px) {
+      :root { --header-h: 68px; }
       .nav { display: flex; }
-      .hero {
-        grid-template-columns: minmax(360px, 460px) 1fr;
-        grid-template-rows: 1fr auto;
-        grid-template-areas: "panel stage" "rail rail";
-        min-height: 100svh;
+      .hero { height: 230vh; height: 230svh; }
+      .hero-pin {
+        padding-bottom: 0;
+        grid-template-columns: minmax(380px, 480px) minmax(0, 1fr);
+        grid-template-rows: minmax(0, 1fr) auto;
+        grid-template-areas: "left stage" "rail rail";
       }
-      .stage { height: auto; min-height: 520px; }
-      .panel { padding: 40px 36px 40px max(36px, calc((100vw - 1200px) / 2)); }
-      .rail-head, .rail { padding-left: max(24px, calc((100vw - 1200px) / 2)); padding-right: 24px; }
+      .wordmark { font-size: 13.5vw; }
+      .left { padding: 0 8px 12px max(32px, calc((100vw - 1240px) / 2)); }
+      .intro h1 { font-size: clamp(44px, 4.6vw, 70px); margin-bottom: 16px; }
+      .p-name { font-size: clamp(32px, 3.4vw, 50px); margin-bottom: 8px; }
+      .p-price { font-size: 28px; }
+      .p-desc { display: block; color: #D9CCDD; max-width: 44ch; margin-bottom: 14px; font-size: 14.5px; }
+      .p-meta { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0 16px; margin-bottom: 18px; max-width: 460px; font-size: 13px; }
+      .p-meta dt { font-weight: 600; padding: 7px 0; border-top: 1px solid rgba(255, 255, 255, 0.16); }
+      .p-meta dd { padding: 7px 0; border-top: 1px solid rgba(255, 255, 255, 0.16); color: #CDBFD2; }
+      .p-links { display: block; margin-top: 14px; font-size: 13.5px; color: #CDBFD2; }
+      .p-links a { color: #fff; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+      .btn-primary { padding: 0 28px; min-height: 52px; }
+      .stage-arrow { width: 46px; height: 46px; }
+      .stage-arrow.prev { left: 14px; }
+      .stage-arrow.next { right: 14px; }
+      .stage-tools { display: flex; }
+      .stage-hint { bottom: 14px; font-size: 13px; }
+      .polaroid { width: 150px; right: 6%; top: 8%; }
+      .rail { padding: 12px max(24px, calc((100vw - 1240px) / 2)) 12px; gap: 12px; }
+      .thumb { width: 84px; font-size: 11.5px; }
+      .thumb img { width: 70px; height: 70px; margin-bottom: 5px; border-radius: 22px; }
       .section { padding: 96px 24px; }
-      .menu-grid { grid-template-columns: repeat(4, 1fr); }
+      .menu-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
       .contact-grid { grid-template-columns: 1.1fr 1fr; gap: 56px; align-items: start; }
       .bottom-bar { display: none; }
       .site-footer { padding-bottom: 28px; }
@@ -344,19 +415,21 @@
       .modal-overlay { align-items: center; padding: 24px; }
       .modal-card { border-radius: 28px; padding: 32px; transform: translateY(20px) scale(0.98); }
       .modal-overlay.open .modal-card { transform: none; }
+      .hs-label { font-size: 12.5px; }
     }
     @media (min-width: 1200px) { .menu-grid { gap: 40px 24px; } }
+    @media (max-width: 899px) {
+      .hs-label { font-size: 11px; padding: 4px 9px; max-width: 120px; }
+    }
     @media (prefers-reduced-motion: reduce) {
-      html { scroll-behavior: auto; }
       *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+      .hs-dot::after { animation: none; }
     }
   </style>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
-
-  <h1 class="sr-only">PETIT FOUR — Tiệm bánh Artisan: xem bánh 3D và đặt hàng trực tuyến</h1>
 
   <!-- ===== Header ===== -->
   <header class="site-header" id="site-header">
@@ -365,7 +438,7 @@
       <small data-brand-sub>Artisan Bakery &amp; Tea House</small>
     </a>
     <nav class="nav" aria-label="Điều hướng chính">
-      <a href="#hero">Xem bánh 3D</a>
+      <a href="#hero" data-go="pick">Xem bánh 3D</a>
       <a href="#menu">Thực đơn</a>
       <a href="#delivery">Đặt qua app</a>
       <a href="#contact">Liên hệ</a>
@@ -377,58 +450,77 @@
       </button>
       <button class="icon-btn cart-btn" id="btn-open-cart" aria-label="Mở giỏ hàng">
         <svg class="ic" viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-        <span>Giỏ hàng</span>
+        <span class="cart-label">Giỏ hàng</span>
         <span class="badge-count" id="cart-counter">0</span>
       </button>
     </div>
   </header>
 
   <main>
-    <!-- ===== Hero: showroom 3D ===== -->
+    <!-- ===== Hero: cảnh 3D cuộn trang ===== -->
     <section class="hero" id="hero" aria-label="Xem bánh 3D">
-      <div class="stage" id="stage-wrap">
-        <div class="stage-ghost" id="stage-ghost" aria-hidden="true">Petit Four</div>
-        <canvas id="stage-canvas" aria-label="Mô hình 3D của bánh. Kéo ngang để xoay."></canvas>
-        <div class="stage-fallback"><img id="stage-fallback-img" src="" alt=""></div>
-        <div class="stage-hint" id="stage-hint">
-          <svg class="ic" viewBox="0 0 24 24" style="width:16px;height:16px"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
-          Kéo để xoay 360°
-        </div>
-        <button class="icon-btn stage-arrow prev" id="btn-prev" aria-label="Món trước"><svg class="ic" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
-        <button class="icon-btn stage-arrow next" id="btn-next" aria-label="Món tiếp theo"><svg class="ic" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></button>
-        <div class="stage-tools">
-          <button class="icon-btn" id="btn-zoom-out" aria-label="Thu nhỏ"><svg class="ic" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
-          <button class="icon-btn" id="btn-zoom-in" aria-label="Phóng to"><svg class="ic" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
-        </div>
-      </div>
+      <div class="hero-pin" id="hero-pin">
+        <div class="glow" id="glow"></div>
+        <div class="wordmark" id="wordmark" aria-hidden="true" data-brand>PETIT FOUR</div>
 
-      <div class="panel" aria-live="polite">
-        <div class="p-cat" id="p-category">Artisan</div>
-        <h2 class="p-name" id="p-name">Đang tải thực đơn…</h2>
-        <div class="p-price" id="p-price"></div>
-        <p class="p-desc" id="p-desc"></p>
-        <dl class="p-meta">
-          <dt>Hương vị</dt><dd id="p-flavor">—</dd>
-          <dt>Nguyên liệu</dt><dd id="p-ingredients">—</dd>
-          <dt>Khối lượng</dt><dd id="p-weight">—</dd>
-        </dl>
-        <div class="buy-row">
-          <div class="qty" role="group" aria-label="Số lượng">
-            <button id="qty-minus" aria-label="Giảm số lượng">&minus;</button>
-            <span id="qty-count">1</span>
-            <button id="qty-plus" aria-label="Tăng số lượng">+</button>
+        <div class="stage" id="stage-wrap">
+          <canvas id="stage-canvas" aria-label="Mô hình 3D của bánh. Kéo ngang để xoay."></canvas>
+          <div class="stage-fallback"><img id="stage-fallback-img" src="" alt=""></div>
+          <div class="hotspots" id="hotspots"></div>
+          <figure class="polaroid" id="polaroid">
+            <img id="polaroid-img" src="" alt="Ảnh thật của món">
+            <figcaption>Ảnh thật</figcaption>
+          </figure>
+          <div class="stage-hint" id="stage-hint">
+            <svg class="ic" viewBox="0 0 24 24" style="width:16px;height:16px"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+            Kéo để xoay · chạm điểm sáng để xem nguyên liệu
           </div>
-          <button class="btn-primary" id="btn-add-to-cart">
-            <span>Thêm vào giỏ</span>
-            <span id="detail-btn-price">0 đ</span>
-          </button>
+          <button class="icon-btn stage-arrow prev" id="btn-prev" aria-label="Món trước"><svg class="ic" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
+          <button class="icon-btn stage-arrow next" id="btn-next" aria-label="Món tiếp theo"><svg class="ic" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></button>
+          <div class="stage-tools">
+            <button class="icon-btn" id="btn-zoom-out" aria-label="Thu nhỏ"><svg class="ic" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+            <button class="icon-btn" id="btn-zoom-in" aria-label="Phóng to"><svg class="ic" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+          </div>
         </div>
-        <p class="p-links">Không muốn đặt ở đây? <a href="#delivery">Đặt qua app giao hàng</a></p>
-      </div>
 
-      <div class="rail-wrap">
-        <div class="rail-head"><span>Chọn món để xem 3D</span><span id="p-counter">0 / 0</span></div>
-        <div class="rail" id="rail" role="listbox" aria-label="Danh sách món"></div>
+        <div class="left">
+          <div class="intro" id="intro">
+            <h1>Bánh nướng thủ công. Xoay thử trước khi chọn.</h1>
+            <p>Kéo để xoay từng chiếc bánh, chạm vào nguyên liệu, rồi thêm vào giỏ. Hoặc đặt nhanh qua beFood, GrabFood, ShopeeFood và Xanh SM.</p>
+            <div class="intro-cta">
+              <button class="btn-primary" id="btn-start" type="button"><span>Chọn bánh</span></button>
+              <a class="btn-ghost" href="#delivery">Đặt qua app</a>
+            </div>
+          </div>
+
+          <div class="panel" id="panel" aria-live="polite">
+            <div class="p-top"><span class="p-cat" id="p-category">Artisan</span><span class="p-counter" id="p-counter">0 / 0</span></div>
+            <h2 class="p-name" id="p-name">Đang tải thực đơn…</h2>
+            <div class="p-priceline"><span class="p-price" id="p-price"></span><span class="p-stock" id="p-stock" hidden></span></div>
+            <p class="p-desc" id="p-desc"></p>
+            <dl class="p-meta">
+              <dt>Hương vị</dt><dd id="p-flavor">—</dd>
+              <dt>Nguyên liệu</dt><dd id="p-ingredients">—</dd>
+              <dt>Khối lượng</dt><dd id="p-weight">—</dd>
+            </dl>
+            <div class="buy-row">
+              <div class="qty" role="group" aria-label="Số lượng">
+                <button id="qty-minus" aria-label="Giảm số lượng">&minus;</button>
+                <span id="qty-count">1</span>
+                <button id="qty-plus" aria-label="Tăng số lượng">+</button>
+              </div>
+              <button class="btn-primary" id="btn-add-to-cart">
+                <span>Thêm vào giỏ</span>
+                <span id="detail-btn-price">0 đ</span>
+              </button>
+            </div>
+            <p class="p-links">Quen dùng app giao hàng? <a href="#delivery">Đặt qua beFood, Grab, ShopeeFood, Xanh SM</a></p>
+          </div>
+        </div>
+
+        <div class="rail-wrap">
+          <div class="rail" id="rail" role="listbox" aria-label="Danh sách món"></div>
+        </div>
       </div>
     </section>
 
@@ -465,7 +557,7 @@
             <span class="dl-state"><span class="dl-text">Mở app Xanh SM</span><svg class="ic" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></span>
           </a>
         </div>
-        <p class="dl-note">Muốn đặt trực tiếp với tiệm? <a href="#hero">Chọn bánh và thanh toán tại đây</a>.</p>
+        <p class="dl-note">Muốn đặt trực tiếp với tiệm? <a href="#hero" data-go="pick">Chọn bánh và thanh toán tại đây</a>.</p>
       </div>
     </section>
 
@@ -495,7 +587,7 @@
     <span data-brand>PETIT FOUR</span> — <span data-brand-sub>Artisan Bakery &amp; Tea House</span>. Bánh nướng thủ công mỗi ngày.
   </footer>
 
-  <!-- ===== Thanh điều hướng nhanh trên điện thoại ===== -->
+  <!-- ===== Thanh thao tác nhanh trên điện thoại ===== -->
   <nav class="bottom-bar" aria-label="Thao tác nhanh">
     <a class="bar-item" href="#menu"><svg class="ic" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>Thực đơn</a>
     <a class="bar-item" id="bar-call" href="#contact"><svg class="ic" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>Gọi tiệm</a>
