@@ -1,10 +1,10 @@
 /**
  * ============================================================================
- * PETIT FOUR — ARTISAN BAKERY · 3D SHOWROOM
+ * PETIT FOUR — ARTISAN BAKERY · 3D SHOWROOM (v2 — cinematic)
  * ============================================================================
  * Công nghệ: Three.js r128, Web Audio API, Vanilla ES6+, Google Sheets Backend
- * Trải nghiệm: chọn món -> xoay 360° bằng chuột / chạm -> thêm giỏ -> đặt hàng
- * (không có di chuyển góc nhìn thứ nhất như bản cũ)
+ * Trải nghiệm: cuộn trang để camera dolly quanh bánh -> chọn món -> xoay 360°
+ * -> chạm điểm sáng xem nguyên liệu -> thêm giỏ -> đặt hàng / đặt qua app.
  * ============================================================================
  */
 
@@ -21,9 +21,11 @@
     ENABLE_SOUND: true,
     API_TIMEOUT_MS: 15000,
     DRAG_SENSITIVITY: 0.009,
-    AUTO_ROTATE_SPEED: 0.35, // rad / giây
+    AUTO_ROTATE_SPEED: 0.4, // rad / giây
     AUTO_ROTATE_DELAY_MS: 2200,
-    MODEL_SCALE: 3.6
+    MODEL_SCALE: 3.6,
+    PICK_THRESHOLD: 0.3, // ngưỡng cuộn để chuyển từ phần giới thiệu sang phần chọn bánh
+    LOW_STOCK_LIMIT: 15  // hiện nhãn "Chỉ còn N chiếc" khi stock <= giá trị này
   };
 
   // --- DỮ LIỆU DEMO DỰ PHÒNG ---
@@ -42,7 +44,7 @@
       ingredients: 'Bơ lạt Pháp Elle & Vire, Bột mì T55, Men tươi',
       flavor: 'Thơm bơ béo nhẹ, vỏ giòn ruột xốp', weight: '85g',
       image_url: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=800&q=80',
-      model_type: 'croissant'
+      model_type: 'croissant', is_featured: true
     },
     {
       id: 'prod_02', name: 'Almond Croissant Nướng Giòn', category: 'cat_pastry', price: 65000,
@@ -50,7 +52,7 @@
       ingredients: 'Bột hạnh nhân Mỹ, Trứng gà tươi, Bơ Pháp, Rượu rum',
       flavor: 'Ngọt dịu, bùi béo hạnh nhân', weight: '120g',
       image_url: 'https://images.unsplash.com/photo-1549931319-a545dcf3bc73?auto=format&fit=crop&w=800&q=80',
-      model_type: 'croissant'
+      model_type: 'croissant', is_featured: true
     },
     {
       id: 'prod_04', name: 'Strawberry Shortcake Nhật Bản', category: 'cat_signature', price: 85000,
@@ -58,7 +60,7 @@
       ingredients: 'Dâu tây Đà Lạt, Kem sữa Hokkaido, Trứng tươi',
       flavor: 'Chua ngọt thanh tao, kem mát mịn', weight: '140g',
       image_url: 'https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&w=800&q=80',
-      model_type: 'strawberry_cake'
+      model_type: 'strawberry_cake', is_featured: true
     },
     {
       id: 'prod_05', name: 'Bánh Kem Chocolate Truffle', category: 'cat_signature', price: 90000,
@@ -66,7 +68,7 @@
       ingredients: 'Chocolate Bỉ 70%, Bột ca cao nguyên chất, Bơ Pháp',
       flavor: 'Đậm vị ca cao, ngọt vừa sâu lắng', weight: '150g',
       image_url: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=800&q=80',
-      model_type: 'chocolate_cake'
+      model_type: 'chocolate_cake', is_featured: true
     },
     {
       id: 'prod_07', name: 'Éclair Chocolate Hạt Phỉ', category: 'cat_pastry', price: 58000,
@@ -82,7 +84,7 @@
       ingredients: 'Vani Madagascar, Quả mâm xôi, Việt quất, Bột hạnh nhân',
       flavor: 'Vỏ giòn béo, hoa quả chua mọng thanh thoát', weight: '110g',
       image_url: 'https://images.unsplash.com/photo-1519869325930-281384150729?auto=format&fit=crop&w=800&q=80',
-      model_type: 'tart'
+      model_type: 'tart', is_featured: true
     },
     {
       id: 'prod_11', name: 'Bánh Mì Sourdough Men Rừng', category: 'cat_bread', price: 70000,
@@ -90,7 +92,7 @@
       ingredients: 'Bột mì nguyên cám hữu cơ, Men mẹ tự nhiên 6 năm tuổi',
       flavor: 'Chua nhẹ hậu vị ngọt lúa mì', weight: '500g',
       image_url: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=80',
-      model_type: 'bread'
+      model_type: 'bread', is_featured: true
     },
     {
       id: 'prod_14', name: 'Donut Chocolate Caramel Muối', category: 'cat_pastry', price: 38000,
@@ -106,7 +108,7 @@
       ingredients: 'Cream cheese Anchor, Bột cacao, Giấm táo',
       flavor: 'Chua béo phô mai cân bằng cốt bánh ẩm', weight: '100g',
       image_url: 'https://images.unsplash.com/photo-1576618148400-f54bed99fcfd?auto=format&fit=crop&w=800&q=80',
-      model_type: 'cupcake'
+      model_type: 'cupcake', is_featured: true
     },
     {
       id: 'prod_18', name: 'Hộp Macaron Tinh Hoa (6 Vị)', category: 'cat_cookies', price: 160000,
@@ -114,7 +116,7 @@
       ingredients: 'Bột hạnh nhân Pháp, Trứng gà sạch, Ganache hoa quả',
       flavor: 'Vỏ giòn tan lập tức tan chảy cùng nhân', weight: '150g',
       image_url: 'https://images.unsplash.com/photo-1569864321390-38435d67e6b7?auto=format&fit=crop&w=800&q=80',
-      model_type: 'macaron'
+      model_type: 'macaron', is_featured: true
     },
     {
       id: 'prod_19', name: 'Cà Phê Latte Hạt Phỉ Thủ Công', category: 'cat_drinks', price: 55000,
@@ -122,7 +124,7 @@
       ingredients: 'Arabica Cầu Đất sơ chế ướt, Sữa thanh trùng tươi, Hạt phỉ rang xay',
       flavor: 'Thơm nồng nàn, êm dịu béo ngậy', weight: '320ml',
       image_url: 'https://images.unsplash.com/photo-1534778101976-62847782c213?auto=format&fit=crop&w=800&q=80',
-      model_type: 'drink'
+      model_type: 'drink', is_featured: true
     },
     {
       id: 'prod_20', name: 'Trà Hoa Bá Tước Kem Sữa Đào', category: 'cat_drinks', price: 60000,
@@ -156,18 +158,18 @@
     xanhsm_url: ''
   };
 
-  // Màu nền sân khấu theo loại bánh
-  const MODEL_TINTS = {
-    croissant: '#F6DFB9',
-    donut: '#F9D2DD',
-    cupcake: '#F7D3E3',
-    strawberry_cake: '#FBD6DA',
-    chocolate_cake: '#E8D3C5',
-    macaron: '#E3D8F2',
-    bread: '#EADCC1',
-    eclair: '#E4D5C6',
-    tart: '#F9E6B0',
-    drink: '#D6E6D8'
+  // Màu ánh sáng nền theo loại bánh (nền sân khấu tối, màu này tạo quầng sáng phía sau)
+  const MODEL_GLOWS = {
+    croissant: '#E0902F',
+    donut: '#E8457C',
+    cupcake: '#E86AA6',
+    strawberry_cake: '#F0506E',
+    chocolate_cake: '#9A5B3A',
+    macaron: '#9C7BDB',
+    bread: '#C9873F',
+    eclair: '#B9783F',
+    tart: '#E8B923',
+    drink: '#4FAF8A'
   };
 
   // Các app giao hàng (thứ tự hiển thị)
@@ -178,6 +180,13 @@
     { key: 'xanhsm_url', id: 'dl-xanh', label: 'Xanh SM', cls: 'dl-xanh' }
   ];
 
+  // Ảnh thay thế khi ảnh sản phẩm lỗi / bị chặn
+  const PLACEHOLDER_IMG = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">' +
+    '<stop offset="0" stop-color="#F6DCE2"/><stop offset="1" stop-color="#E3D8F2"/></linearGradient></defs>' +
+    '<rect width="200" height="200" fill="url(#g)"/><text x="100" y="128" font-size="84" text-anchor="middle">🥐</text></svg>'
+  );
+
   // --- TIỆN ÍCH ---
   const $ = (id) => document.getElementById(id);
   const fmt = (n) => Number(n || 0).toLocaleString('vi-VN') + ' đ';
@@ -185,13 +194,35 @@
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const smooth = (x) => { x = clamp(x, 0, 1); return x * x * (3 - 2 * x); };
   const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const isSafeUrl = (u) => /^https?:\/\//i.test(String(u || '').trim());
+  const isTruthy = (v) => v === true || v === 'TRUE' || v === 'true' || v === 1;
+
+  // Ảnh lỗi -> dùng ảnh thay thế (bắt ở pha capture vì sự kiện error không nổi bọt)
+  document.addEventListener('error', (e) => {
+    const t = e.target;
+    if (t && t.tagName === 'IMG' && !t.dataset.fallbackApplied) {
+      t.dataset.fallbackApplied = '1';
+      t.src = PLACEHOLDER_IMG;
+    }
+  }, true);
 
   function resolveModelType(p) {
     const t = p.model_type;
     if (p.category === 'cat_drinks' && (!t || t === 'bread')) return 'drink';
     return t || 'croissant';
+  }
+
+  // Tách nguyên liệu thành các nhãn cho hotspot
+  function parseIngredients(p) {
+    const raw = String(p.ingredients || '');
+    const seen = {};
+    return raw.split(',').map((s) => s.trim()).filter((s) => {
+      if (!s || seen[s.toLowerCase()]) return false;
+      seen[s.toLowerCase()] = true;
+      return true;
+    }).slice(0, window.innerWidth < 640 ? 3 : 4);
   }
 
   // --- AUDIO SYNTHESIZER (Web Audio API - không cần file ngoài) ---
@@ -249,6 +280,14 @@
       return new THREE.MeshStandardMaterial({ color: color, roughness: roughness, metalness: metalness });
     }
 
+    // Vật liệu bóng có lớp phủ (glaze, kem, trái cây) — phản chiếu ánh sáng môi trường
+    static gloss(color, roughness = 0.14, clearcoat = 1) {
+      return new THREE.MeshPhysicalMaterial({
+        color: color, roughness: roughness, metalness: 0.0,
+        clearcoat: clearcoat, clearcoatRoughness: 0.08
+      });
+    }
+
     static pseudo(seed) {
       const x = Math.sin(seed * 127.1) * 43758.5453;
       return x - Math.floor(x);
@@ -258,12 +297,12 @@
     static createCroissant() {
       const group = new THREE.Group();
       const N = 9;
-      const segGeo = new THREE.SphereGeometry(1, 18, 12);
+      const segGeo = new THREE.SphereGeometry(1, 20, 14);
       for (let i = 0; i < N; i++) {
         const t = i / (N - 1);
         const a = (t - 0.5) * 2.2;
         const s = 0.05 + 0.075 * Math.sin(Math.PI * t);
-        const seg = new THREE.Mesh(segGeo, this.mat(i % 2 ? 0xC9894A : 0xDB9D5C, 0.4));
+        const seg = new THREE.Mesh(segGeo, this.gloss(i % 2 ? 0xC9894A : 0xDB9D5C, 0.38, 0.35));
         seg.scale.set(0.088, s, s * 1.05);
         seg.position.set(Math.sin(a) * 0.27, s * 0.95, -Math.cos(a) * 0.2 + 0.19);
         seg.rotation.y = -a;
@@ -275,12 +314,12 @@
     // 2. Donut tráng men hồng + cốm màu
     static createDonut() {
       const group = new THREE.Group();
-      const dough = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.1, 16, 32), this.mat(0xE2AE72, 0.6));
+      const dough = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.1, 18, 40), this.mat(0xE2AE72, 0.6));
       dough.rotation.x = Math.PI / 2;
       dough.position.y = 0.1;
       group.add(dough);
 
-      const glaze = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.104, 16, 32), this.mat(0xDE5D83, 0.15, 0.1));
+      const glaze = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.104, 18, 40), this.gloss(0xDE5D83, 0.1));
       glaze.rotation.x = Math.PI / 2;
       glaze.scale.set(1, 1, 0.55);
       glaze.position.y = 0.145;
@@ -303,19 +342,19 @@
     static createCupcake() {
       const group = new THREE.Group();
       const inner = new THREE.Group();
-      const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.13, 0.2, 20), this.mat(0xB35C6A, 0.8));
+      const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.13, 0.2, 28), this.mat(0xB35C6A, 0.8));
       inner.add(cup);
 
-      const creamMat = new THREE.MeshStandardMaterial({ color: 0xFDFBF7, roughness: 0.3 });
-      const l1 = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.21, 0.08, 20), creamMat);
+      const creamMat = this.gloss(0xFDFBF7, 0.3, 0.4);
+      const l1 = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.21, 0.08, 28), creamMat);
       l1.position.y = 0.12;
-      const l2 = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.18, 0.08, 18), creamMat);
+      const l2 = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.18, 0.08, 24), creamMat);
       l2.position.y = 0.18;
-      const l3 = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.12, 16), creamMat);
+      const l3 = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.12, 20), creamMat);
       l3.position.y = 0.26;
       inner.add(l1, l2, l3);
 
-      const cherry = new THREE.Mesh(new THREE.SphereGeometry(0.045, 14, 14), this.mat(0xB31B1B, 0.1));
+      const cherry = new THREE.Mesh(new THREE.SphereGeometry(0.045, 20, 20), this.gloss(0xB31B1B, 0.08));
       cherry.position.y = 0.33;
       inner.add(cherry);
 
@@ -329,7 +368,7 @@
       const group = new THREE.Group();
       const inner = new THREE.Group();
       const spongeMat = this.mat(0xF7E4B2, 0.6);
-      const creamMat = new THREE.MeshStandardMaterial({ color: 0xFFFFFF, roughness: 0.2 });
+      const creamMat = this.gloss(0xFFFFFF, 0.25, 0.5);
 
       const s1 = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.08, 0.36), spongeMat);
       const c1 = new THREE.Mesh(new THREE.BoxGeometry(0.37, 0.04, 0.37), creamMat);
@@ -340,14 +379,14 @@
       c2.position.y = 0.18;
       inner.add(s1, c1, s2, c2);
 
-      const strawMat = this.mat(0xDC2626, 0.2);
+      const strawMat = this.gloss(0xDC2626, 0.1);
       const leafMat = this.mat(0x3F8F4A, 0.6);
-      [[-0.08, -0.04], [0.09, 0.06]].forEach((p, i) => {
-        const berry = new THREE.Mesh(new THREE.SphereGeometry(0.06, 14, 12), strawMat);
+      [[-0.08, -0.04], [0.09, 0.06]].forEach((p) => {
+        const berry = new THREE.Mesh(new THREE.SphereGeometry(0.06, 20, 16), strawMat);
         berry.scale.set(1, 1.15, 1);
         berry.position.set(p[0], 0.25, p[1]);
         const leaf = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.03, 6), leafMat);
-        leaf.position.set(p[0], 0.325 - i * 0.0, p[1]);
+        leaf.position.set(p[0], 0.325, p[1]);
         inner.add(berry, leaf);
       });
 
@@ -356,12 +395,12 @@
       return group;
     }
 
-    // 5. Chocolate cake nhiều tầng
+    // 5. Chocolate cake nhiều tầng, có ganache chảy
     static createChocolateCake() {
       const group = new THREE.Group();
       const inner = new THREE.Group();
       const chocoSponge = this.mat(0x382017, 0.7);
-      const chocoCream = new THREE.MeshStandardMaterial({ color: 0x22110B, roughness: 0.2, metalness: 0.1 });
+      const chocoCream = this.gloss(0x22110B, 0.12);
 
       const s1 = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.1, 0.38), chocoSponge);
       const c1 = new THREE.Mesh(new THREE.BoxGeometry(0.39, 0.04, 0.39), chocoCream);
@@ -372,9 +411,27 @@
       glaze.position.y = 0.2;
       inner.add(s1, c1, s2, glaze);
 
-      const curlMat = this.mat(0x6A3F2B, 0.35);
+      // Ganache chảy xuống thành bánh
+      let seed = 3;
+      for (let side = 0; side < 4; side++) {
+        const nx = Math.cos(side * Math.PI / 2);
+        const nz = Math.sin(side * Math.PI / 2);
+        const tx = -nz;
+        const tz = nx;
+        for (let k = 0; k < 3; k++) {
+          const off = -0.12 + k * 0.12;
+          const len = 0.05 + this.pseudo(seed++) * 0.08;
+          const drip = new THREE.Mesh(new THREE.CylinderGeometry(0.017, 0.017, len, 10), chocoCream);
+          drip.position.set(nx * 0.201 + tx * off, 0.215 - len / 2, nz * 0.201 + tz * off);
+          const tip = new THREE.Mesh(new THREE.SphereGeometry(0.019, 10, 10), chocoCream);
+          tip.position.set(nx * 0.201 + tx * off, 0.215 - len, nz * 0.201 + tz * off);
+          inner.add(drip, tip);
+        }
+      }
+
+      const curlMat = this.gloss(0x6A3F2B, 0.3);
       for (let i = 0; i < 4; i++) {
-        const curl = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.12, 8), curlMat);
+        const curl = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.12, 10), curlMat);
         curl.rotation.z = Math.PI / 2;
         curl.rotation.y = i * 0.7;
         curl.position.set(-0.06 + i * 0.05, 0.235, -0.03 + (i % 2) * 0.06);
@@ -395,12 +452,12 @@
       const group = new THREE.Group();
       const makeMac = (shellColor) => {
         const m = new THREE.Group();
-        const shellMat = new THREE.MeshStandardMaterial({ color: shellColor, roughness: 0.35 });
-        const top = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.17, 0.06, 24), shellMat);
+        const shellMat = this.gloss(shellColor, 0.35, 0.3);
+        const top = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.17, 0.06, 32), shellMat);
         top.position.y = 0.05;
-        const bot = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.18, 0.06, 24), shellMat);
+        const bot = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.18, 0.06, 32), shellMat);
         bot.position.y = -0.05;
-        const fill = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.04, 24), new THREE.MeshStandardMaterial({ color: 0xFFF3E0, roughness: 0.3 }));
+        const fill = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.04, 32), this.mat(0xFFF3E0, 0.3));
         m.add(top, fill, bot);
         m.position.y = 0.08;
         return m;
@@ -423,7 +480,7 @@
     // 7. Bánh mì nướng nâu có đường rạch
     static createBreadLoaf() {
       const group = new THREE.Group();
-      const bread = new THREE.Mesh(new THREE.SphereGeometry(1, 28, 18), this.mat(0xA8602A, 0.7));
+      const bread = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 20), this.mat(0xA8602A, 0.7));
       bread.scale.set(0.3, 0.13, 0.17);
       bread.position.y = 0.12;
       group.add(bread);
@@ -441,14 +498,14 @@
     // 8. Éclair phủ socola
     static createEclair() {
       const group = new THREE.Group();
-      const body = new THREE.Mesh(new THREE.SphereGeometry(1, 28, 16), this.mat(0xD9A566, 0.5));
+      const body = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 18), this.mat(0xD9A566, 0.5));
       body.scale.set(0.27, 0.085, 0.092);
       body.position.y = 0.085;
       group.add(body);
 
       const glaze = new THREE.Mesh(
-        new THREE.SphereGeometry(1, 28, 12, 0, Math.PI * 2, 0, Math.PI / 2),
-        new THREE.MeshStandardMaterial({ color: 0x2A1810, roughness: 0.15 })
+        new THREE.SphereGeometry(1, 32, 14, 0, Math.PI * 2, 0, Math.PI / 2),
+        this.gloss(0x2A1810, 0.1)
       );
       glaze.scale.set(0.262, 0.065, 0.098);
       glaze.position.y = 0.11;
@@ -460,21 +517,21 @@
     static createTart() {
       const group = new THREE.Group();
       const inner = new THREE.Group();
-      const crust = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.19, 0.08, 28), this.mat(0xC68642, 0.6));
+      const crust = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.19, 0.08, 36), this.mat(0xC68642, 0.6));
       inner.add(crust);
 
-      const filling = new THREE.Mesh(new THREE.CylinderGeometry(0.21, 0.21, 0.03, 24), new THREE.MeshStandardMaterial({ color: 0xFDEE87, roughness: 0.2 }));
+      const filling = new THREE.Mesh(new THREE.CylinderGeometry(0.21, 0.21, 0.03, 32), this.gloss(0xFDEE87, 0.2, 0.6));
       filling.position.y = 0.04;
       inner.add(filling);
 
-      const berryMat = this.mat(0x9E1B4A, 0.2);
+      const berryMat = this.gloss(0x9E1B4A, 0.12);
       for (let i = 0; i < 6; i++) {
         const ang = (i / 6) * Math.PI * 2;
-        const berry = new THREE.Mesh(new THREE.SphereGeometry(0.04, 10, 10), berryMat);
+        const berry = new THREE.Mesh(new THREE.SphereGeometry(0.04, 16, 16), berryMat);
         berry.position.set(Math.cos(ang) * 0.12, 0.075, Math.sin(ang) * 0.12);
         inner.add(berry);
       }
-      const blue = new THREE.Mesh(new THREE.SphereGeometry(0.045, 10, 10), this.mat(0x3B4B9A, 0.25));
+      const blue = new THREE.Mesh(new THREE.SphereGeometry(0.045, 16, 16), this.gloss(0x3B4B9A, 0.15));
       blue.position.set(0, 0.078, 0);
       const mint = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.05, 6), this.mat(0x4F8F5A, 0.6));
       mint.position.set(0.04, 0.105, 0.03);
@@ -489,31 +546,31 @@
     // 10. Đồ uống: tách cà phê latte
     static createDrink() {
       const group = new THREE.Group();
-      const ceramic = new THREE.MeshStandardMaterial({ color: 0xFFFFFF, roughness: 0.2, side: THREE.DoubleSide });
+      const ceramic = new THREE.MeshPhysicalMaterial({ color: 0xFFFFFF, roughness: 0.15, clearcoat: 1, clearcoatRoughness: 0.05, side: THREE.DoubleSide });
 
-      const saucer = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.22, 0.02, 32), ceramic);
+      const saucer = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.22, 0.02, 40), ceramic);
       saucer.position.y = 0.01;
       group.add(saucer);
 
-      const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.12, 0.2, 32, 1, true), ceramic);
+      const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.12, 0.2, 40, 1, true), ceramic);
       cup.position.y = 0.12;
       group.add(cup);
-      const cupBottom = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.01, 32), ceramic);
+      const cupBottom = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.01, 40), ceramic);
       cupBottom.position.y = 0.025;
       group.add(cupBottom);
 
-      const coffee = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.01, 32), this.mat(0x7A4A2B, 0.3));
+      const coffee = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.01, 40), this.gloss(0x7A4A2B, 0.2));
       coffee.position.y = 0.19;
       group.add(coffee);
 
-      const art = new THREE.Mesh(new THREE.TorusGeometry(0.07, 0.022, 10, 28), this.mat(0xF5E6D0, 0.4));
+      const art = new THREE.Mesh(new THREE.TorusGeometry(0.07, 0.022, 12, 32), this.mat(0xF5E6D0, 0.4));
       art.rotation.x = Math.PI / 2;
       art.position.y = 0.197;
-      const artDot = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.004, 20), this.mat(0xF5E6D0, 0.4));
+      const artDot = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.004, 24), this.mat(0xF5E6D0, 0.4));
       artDot.position.y = 0.196;
       group.add(art, artDot);
 
-      const handle = new THREE.Mesh(new THREE.TorusGeometry(0.065, 0.017, 10, 20, Math.PI), ceramic);
+      const handle = new THREE.Mesh(new THREE.TorusGeometry(0.065, 0.017, 12, 24, Math.PI), ceramic);
       handle.position.set(0.17, 0.125, 0);
       handle.rotation.z = -Math.PI / 2;
       group.add(handle);
@@ -540,8 +597,8 @@
       const holder = new THREE.Group();
       if (modelType !== 'drink') {
         const plate = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.34, 0.26, 0.025, 36),
-          new THREE.MeshStandardMaterial({ color: 0xFAF8F5, roughness: 0.2, metalness: 0.05 })
+          new THREE.CylinderGeometry(0.34, 0.26, 0.025, 48),
+          new THREE.MeshPhysicalMaterial({ color: 0xFAF8F5, roughness: 0.18, clearcoat: 1, clearcoatRoughness: 0.06 })
         );
         plate.position.y = -0.0125;
         holder.add(plate);
@@ -557,16 +614,20 @@
     }
   }
 
-  // --- SÂN KHẤU 3D: xoay bằng kéo chuột / chạm, tự xoay khi rảnh ---
+  // --- SÂN KHẤU 3D ---
+  // Camera dolly theo tiến độ cuộn (progress), xoay bằng kéo chuột / chạm,
+  // hotspot nguyên liệu gắn vào mô hình, hạt lấp lánh và hiệu ứng nổ khi đổi món.
   class ShowcaseStage {
-    constructor(canvas, wrap) {
+    constructor(canvas, wrap, hotspotLayer) {
       this.canvas = canvas;
       this.wrap = wrap;
+      this.hotspotLayer = hotspotLayer;
       this.ok = false;
       this.visible = true;
       this.model = null;
       this.currentType = null;
       this.pending = null;
+      this.pendingLabels = [];
       this.trans = null;
       this.curScale = 0.001;
       this.rotY = 0.7;
@@ -574,9 +635,16 @@
       this.velY = 0;
       this.dragging = false;
       this.zoom = 1;
+      this.progress = 0;
+      this.curP = 0;
+      this.px = 0; this.py = 0; // vị trí con trỏ (parallax)
+      this.tpx = 0; this.tpy = 0;
+      this.hsEls = [];
+      this.anchors = [];
+      this.burstLife = 99;
       this.lastInteract = performance.now() - CONFIG.AUTO_ROTATE_DELAY_MS;
       this.onFirstInteract = null;
-      this.time = 0;
+      this.camTarget = new THREE.Vector3(0, 0.55, 0);
 
       if (typeof THREE === 'undefined') return;
       try {
@@ -586,18 +654,19 @@
       }
 
       const r = this.renderer;
-      r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      const isSmall = window.innerWidth < 640;
+      r.setPixelRatio(Math.min(window.devicePixelRatio || 1, isSmall ? 1.75 : 2));
       r.shadowMap.enabled = true;
       r.shadowMap.type = THREE.PCFSoftShadowMap;
       r.outputEncoding = THREE.sRGBEncoding;
       r.toneMapping = THREE.ACESFilmicToneMapping;
-      r.toneMappingExposure = 1.05;
+      r.toneMappingExposure = 1.0;
       r.setClearColor(0x000000, 0);
 
       this.scene = new THREE.Scene();
       this.camera = new THREE.PerspectiveCamera(34, 1, 0.1, 60);
-      this.camTarget = new THREE.Vector3(0, 0.55, 0);
 
+      this.buildEnvironment();
       this.buildScene();
       this.bindEvents();
       this.resize();
@@ -606,64 +675,120 @@
       this.loop();
     }
 
-    buildScene() {
-      const hemi = new THREE.HemisphereLight(0xffffff, 0xf0d9e0, 0.85);
-      this.scene.add(hemi);
+    // Môi trường phản chiếu kiểu studio (softbox) để lớp glaze, kem, sứ có ánh bóng thật
+    buildEnvironment() {
+      try {
+        const pm = new THREE.PMREMGenerator(this.renderer);
+        const es = new THREE.Scene();
+        es.background = new THREE.Color(0x0a0610);
+        const box = (w, h, rgb, pos) => {
+          const m = new THREE.Mesh(
+            new THREE.PlaneGeometry(w, h),
+            new THREE.MeshBasicMaterial({ color: new THREE.Color(rgb[0], rgb[1], rgb[2]), side: THREE.DoubleSide })
+          );
+          m.position.set(pos[0], pos[1], pos[2]);
+          m.lookAt(0, 0, 0);
+          es.add(m);
+        };
+        box(8, 5, [7, 5.5, 4], [3, 6, 4]);      // softbox chính ấm
+        box(2, 9, [2.5, 3, 5], [-7, 2, 1]);     // dải sáng lạnh bên trái
+        box(9, 2, [3, 3, 3], [0, 8, -2]);       // đèn trần
+        box(5, 3, [1.6, 1.1, 0.9], [0, 1, -8]); // ánh nền phía sau
+        this.envMap = pm.fromScene(es, 0.04).texture;
+        this.scene.environment = this.envMap;
+        pm.dispose();
+      } catch (e) {
+        console.warn('Không tạo được môi trường phản chiếu:', e);
+      }
+    }
 
-      const key = new THREE.DirectionalLight(0xfff4e6, 1.15);
-      key.position.set(3, 5.5, 3.5);
+    makeSpriteTexture() {
+      const c = document.createElement('canvas');
+      c.width = c.height = 64;
+      const g = c.getContext('2d');
+      const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+      grad.addColorStop(0, 'rgba(255,255,255,1)');
+      grad.addColorStop(0.35, 'rgba(255,255,255,0.6)');
+      grad.addColorStop(1, 'rgba(255,255,255,0)');
+      g.fillStyle = grad;
+      g.fillRect(0, 0, 64, 64);
+      return new THREE.CanvasTexture(c);
+    }
+
+    buildScene() {
+      this.scene.add(new THREE.HemisphereLight(0xffffff, 0x3A2340, 0.35));
+
+      const key = new THREE.SpotLight(0xFFE2BE, 1.7, 30, 0.55, 0.65, 1);
+      key.position.set(2.8, 6.5, 3.4);
+      key.target.position.set(0, 0.5, 0);
       key.castShadow = true;
       key.shadow.mapSize.set(1024, 1024);
-      key.shadow.camera.left = -3;
-      key.shadow.camera.right = 3;
-      key.shadow.camera.top = 3;
-      key.shadow.camera.bottom = -3;
-      key.shadow.camera.near = 1;
-      key.shadow.camera.far = 14;
-      key.shadow.bias = -0.0006;
-      this.scene.add(key);
+      key.shadow.bias = -0.0004;
+      this.scene.add(key, key.target);
 
-      const rim = new THREE.DirectionalLight(0xdfe9ff, 0.55);
-      rim.position.set(-4, 3, -3);
+      const rim = new THREE.DirectionalLight(0xB7C7FF, 0.7);
+      rim.position.set(-4, 3, -3.5);
       this.scene.add(rim);
 
-      // Bục trưng bày
-      const podiumMat = new THREE.MeshStandardMaterial({ color: 0xFFFFFF, roughness: 0.45 });
-      const podium = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 0.3, 64), podiumMat);
+      // Bục trưng bày: mặt tối bóng + viền sáng
+      const podium = new THREE.Mesh(
+        new THREE.CylinderGeometry(1.5, 1.55, 0.3, 80),
+        new THREE.MeshStandardMaterial({ color: 0x241528, roughness: 0.2, metalness: 0.65 })
+      );
       podium.position.y = -0.15;
       podium.receiveShadow = true;
       this.scene.add(podium);
 
-      const base = new THREE.Mesh(
-        new THREE.CylinderGeometry(1.72, 1.72, 0.08, 64),
-        new THREE.MeshStandardMaterial({ color: 0xEFE3E6, roughness: 0.6 })
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(1.5, 0.014, 10, 120),
+        new THREE.MeshBasicMaterial({ color: 0xFFB86B })
       );
-      base.position.y = -0.34;
+      ring.rotation.x = Math.PI / 2;
+      ring.position.y = 0.002;
+      this.scene.add(ring);
+
+      const base = new THREE.Mesh(
+        new THREE.CylinderGeometry(1.8, 1.8, 0.1, 80),
+        new THREE.MeshStandardMaterial({ color: 0x150C1A, roughness: 0.5, metalness: 0.4 })
+      );
+      base.position.y = -0.35;
       base.receiveShadow = true;
       this.scene.add(base);
-
-      const shadowPlane = new THREE.Mesh(new THREE.PlaneGeometry(14, 14), new THREE.ShadowMaterial({ opacity: 0.16 }));
-      shadowPlane.rotation.x = -Math.PI / 2;
-      shadowPlane.position.y = -0.381;
-      shadowPlane.receiveShadow = true;
-      this.scene.add(shadowPlane);
 
       // Nhóm xoay chứa món bánh
       this.pivot = new THREE.Group();
       this.scene.add(this.pivot);
 
-      // Hạt lấp lánh nhẹ (bột đường / bụi bột)
-      const count = 60;
+      // Hạt lấp lánh (bụi bột / đường)
+      this.spriteTex = this.makeSpriteTexture();
+      const count = 90;
       const pos = new Float32Array(count * 3);
       for (let i = 0; i < count; i++) {
-        pos[i * 3] = (Math.random() - 0.5) * 6;
-        pos[i * 3 + 1] = Math.random() * 3;
-        pos[i * 3 + 2] = (Math.random() - 0.5) * 4;
+        pos[i * 3] = (Math.random() - 0.5) * 7;
+        pos[i * 3 + 1] = Math.random() * 3.4;
+        pos[i * 3 + 2] = (Math.random() - 0.5) * 4.5;
       }
       const geo = new THREE.BufferGeometry();
       geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-      this.dust = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.045, transparent: true, opacity: 0.75, depthWrite: false }));
+      this.dust = new THREE.Points(geo, new THREE.PointsMaterial({
+        map: this.spriteTex, color: 0xFFD9A0, size: 0.14, transparent: true, opacity: 0.8,
+        depthWrite: false, blending: THREE.AdditiveBlending
+      }));
       this.scene.add(this.dust);
+
+      // Hạt nổ khi đổi món
+      const bn = 48;
+      const bpos = new Float32Array(bn * 3);
+      this.burstVel = new Float32Array(bn * 3);
+      const bgeo = new THREE.BufferGeometry();
+      bgeo.setAttribute('position', new THREE.BufferAttribute(bpos, 3));
+      this.burstPts = new THREE.Points(bgeo, new THREE.PointsMaterial({
+        map: this.spriteTex, color: 0xFFE3B0, size: 0.16, transparent: true, opacity: 0,
+        depthWrite: false, blending: THREE.AdditiveBlending
+      }));
+      this.burstPts.visible = false;
+      this.burstPts.frustumCulled = false;
+      this.scene.add(this.burstPts);
     }
 
     bindEvents() {
@@ -700,7 +825,14 @@
       c.addEventListener('pointercancel', end);
       c.addEventListener('lostpointercapture', end);
 
-      // Phím mũi tên khi canvas đang focus (hỗ trợ bàn phím)
+      // Parallax camera theo con trỏ (chỉ có ý nghĩa với chuột)
+      window.addEventListener('pointermove', (e) => {
+        if (e.pointerType !== 'mouse') return;
+        this.tpx = (e.clientX / window.innerWidth) * 2 - 1;
+        this.tpy = (e.clientY / window.innerHeight) * 2 - 1;
+      });
+
+      // Bàn phím: Shift + mũi tên để xoay khi canvas đang focus
       c.setAttribute('tabindex', '0');
       c.addEventListener('keydown', (e) => {
         if (e.key === 'ArrowLeft' && e.shiftKey) { this.rotY -= 0.2; this.markInteract(); }
@@ -734,27 +866,41 @@
       this.renderer.setSize(w, h, false);
       this.camera.aspect = w / h;
       this.camera.updateProjectionMatrix();
-      this.frameCamera();
     }
 
-    frameCamera() {
-      const aspect = this.camera.aspect || 1;
-      // Đảm bảo bục luôn lọt khung hình, kể cả màn hình dọc của điện thoại
-      const baseDist = Math.max(5.4, 3.5 / (0.611 * aspect));
-      const d = baseDist * this.zoom;
-      this.camera.position.set(0, this.camTarget.y + d * 0.24, d);
-      this.camera.lookAt(this.camTarget);
+    setProgress(p) {
+      this.progress = clamp(p, 0, 1);
     }
 
     setZoom(delta) {
       this.zoom = clamp(this.zoom + delta, 0.6, 1.3);
-      this.frameCamera();
       this.markInteract();
     }
 
-    setModel(type) {
+    // Camera: dolly + nâng góc nhìn theo tiến độ cuộn, parallax nhẹ theo chuột
+    frameCamera() {
+      const aspect = this.camera.aspect || 1;
+      const e = smooth(this.curP);
+      const baseDist = Math.max(5.4, 3.5 / (0.611 * aspect));
+      const d = baseDist * this.zoom * (0.7 + 0.3 * e);
+      const elev = 0.08 + 0.2 * e;
+      this.camTarget.y = 0.55 + (1 - e) * 0.15;
+      this.camera.position.set(
+        this.px * 0.35,
+        this.camTarget.y + Math.sin(elev) * d + this.py * 0.15,
+        Math.cos(elev) * d
+      );
+      this.camera.lookAt(this.camTarget);
+    }
+
+    // labels: danh sách nguyên liệu để tạo hotspot
+    setModel(type, labels) {
       if (!this.ok) return;
-      if (!this.trans && this.currentType === type) return;
+      this.pendingLabels = labels || [];
+      if (!this.trans && this.currentType === type) {
+        this.buildHotspots(this.pendingLabels); // cùng loại mô hình nhưng khác món (vd 2 loại croissant)
+        return;
+      }
       this.pending = type;
       if (!this.model) {
         this.swap();
@@ -772,8 +918,89 @@
       this.model = BakeryMeshBuilder.build(this.pending);
       this.currentType = this.pending;
       this.curScale = 0.001;
+
+      // Hộp bao của mô hình (trước khi scale / xoay) để đặt hotspot
+      this.model.updateMatrixWorld(true);
+      this.bbox = new THREE.Box3().setFromObject(this.model);
+
       this.model.scale.setScalar(this.curScale);
       this.pivot.add(this.model);
+      this.buildHotspots(this.pendingLabels);
+      this.startBurst();
+    }
+
+    buildHotspots(labels) {
+      this.hsEls.forEach((el) => el.remove());
+      this.hsEls = [];
+      this.anchors = [];
+      if (!this.hotspotLayer || !this.bbox) return;
+      const size = new THREE.Vector3();
+      const center = new THREE.Vector3();
+      this.bbox.getSize(size);
+      this.bbox.getCenter(center);
+      const n = labels.length;
+      const heights = [0.78, 0.5, 0.88, 0.32];
+      labels.forEach((text, i) => {
+        const ang = 0.5 + i * (Math.PI * 2 / Math.max(n, 1));
+        const rx = size.x * 0.32;
+        const rz = size.z * 0.32;
+        this.anchors.push(new THREE.Vector3(
+          center.x + Math.cos(ang) * rx,
+          this.bbox.min.y + size.y * heights[i % heights.length],
+          center.z + Math.sin(ang) * rz
+        ));
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'hs';
+        b.innerHTML = '<span class="hs-dot"></span><span class="hs-label"></span>';
+        b.querySelector('.hs-label').textContent = text;
+        b.addEventListener('click', () => b.classList.toggle('open'));
+        b.addEventListener('pointerenter', () => { this.lastInteract = performance.now(); });
+        this.hotspotLayer.appendChild(b);
+        this.hsEls.push(b);
+      });
+    }
+
+    updateHotspots() {
+      if (!this.hsEls.length || !this.model) return;
+      const show = !this.trans && this.curP > 0.55;
+      const w = this.wrap.clientWidth;
+      const h = this.wrap.clientHeight;
+      const center = new THREE.Vector3(0, 0.5, 0);
+      const toCam = this.camera.position.clone().sub(center).normalize();
+      const v = new THREE.Vector3();
+      this.model.updateMatrixWorld(true);
+      for (let i = 0; i < this.hsEls.length; i++) {
+        const el = this.hsEls[i];
+        v.copy(this.anchors[i]);
+        this.model.localToWorld(v);
+        const front = v.clone().sub(center).dot(toCam) > -0.15;
+        v.project(this.camera);
+        const x = (v.x * 0.5 + 0.5) * w;
+        const y = (-v.y * 0.5 + 0.5) * h;
+        el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
+        el.style.opacity = show && front ? '1' : '0';
+        el.style.pointerEvents = show && front ? 'auto' : 'none';
+        if (!front) el.classList.remove('open');
+      }
+    }
+
+    startBurst() {
+      if (!this.burstPts || prefersReducedMotion) return;
+      const pos = this.burstPts.geometry.attributes.position;
+      for (let i = 0; i < pos.count; i++) {
+        pos.setXYZ(i, 0, 0.5, 0);
+        const a = Math.random() * Math.PI * 2;
+        const u = Math.random() * 2 - 1;
+        const s = Math.sqrt(1 - u * u);
+        const sp = 0.8 + Math.random() * 1.6;
+        this.burstVel[i * 3] = Math.cos(a) * s * sp;
+        this.burstVel[i * 3 + 1] = (u * 0.8 + 0.6) * sp;
+        this.burstVel[i * 3 + 2] = Math.sin(a) * s * sp;
+      }
+      pos.needsUpdate = true;
+      this.burstLife = 0;
+      this.burstPts.visible = true;
     }
 
     disposeObject(obj) {
@@ -793,7 +1020,10 @@
     }
 
     update(dt) {
-      this.time += dt;
+      // Làm mượt tiến độ cuộn và vị trí con trỏ
+      this.curP += (this.progress - this.curP) * Math.min(1, dt * 6);
+      this.px += (this.tpx - this.px) * Math.min(1, dt * 3);
+      this.py += (this.tpy - this.py) * Math.min(1, dt * 3);
 
       // Chuyển món: thu nhỏ món cũ -> đổi -> phóng ra món mới
       if (this.trans && this.model) {
@@ -832,19 +1062,45 @@
         }
         if (this.rotX > 0.14) this.rotX = Math.max(0.14, this.rotX - dt * 0.15);
       }
-      this.pivot.rotation.y = this.rotY;
+      const e = smooth(this.curP);
+      this.pivot.rotation.y = this.rotY + (1 - e) * Math.PI * 0.9;
       this.pivot.rotation.x = this.rotX * 0.55;
+      const s = 1 + (1 - e) * 0.12;
+      this.pivot.scale.set(s, s, s);
 
-      // Hạt bay nhẹ
+      // Hạt lấp lánh bay nhẹ
       if (this.dust && !prefersReducedMotion) {
         const p = this.dust.geometry.attributes.position;
         for (let i = 0; i < p.count; i++) {
-          let y = p.getY(i) + dt * (0.04 + (i % 5) * 0.012);
-          if (y > 3) y = 0;
+          let y = p.getY(i) + dt * (0.05 + (i % 5) * 0.014);
+          if (y > 3.4) y = 0;
           p.setY(i, y);
         }
         p.needsUpdate = true;
+        this.dust.position.x = this.px * 0.25;
       }
+
+      // Hạt nổ
+      if (this.burstLife < 1) {
+        this.burstLife += dt;
+        const pos = this.burstPts.geometry.attributes.position;
+        for (let i = 0; i < pos.count; i++) {
+          pos.setXYZ(
+            i,
+            pos.getX(i) + this.burstVel[i * 3] * dt,
+            pos.getY(i) + this.burstVel[i * 3 + 1] * dt,
+            pos.getZ(i) + this.burstVel[i * 3 + 2] * dt
+          );
+          this.burstVel[i * 3] *= 0.96;
+          this.burstVel[i * 3 + 1] *= 0.96;
+          this.burstVel[i * 3 + 2] *= 0.96;
+        }
+        pos.needsUpdate = true;
+        this.burstPts.material.opacity = Math.max(0, 1 - this.burstLife);
+        if (this.burstLife >= 1) this.burstPts.visible = false;
+      }
+
+      this.frameCamera();
     }
 
     loop() {
@@ -853,6 +1109,7 @@
       if (!this.visible || document.hidden) return;
       this.update(dt);
       this.renderer.render(this.scene, this.camera);
+      this.updateHotspots();
     }
   }
 
@@ -871,15 +1128,16 @@
       this.sound = new SoundManager();
       this.sound.enabled = false;
 
-      this.stage = new ShowcaseStage($('stage-canvas'), $('stage-wrap'));
+      this.stage = new ShowcaseStage($('stage-canvas'), $('stage-wrap'), $('hotspots'));
       if (!this.stage.ok) {
         $('stage-wrap').classList.add('no-webgl');
       } else {
         this.stage.onFirstInteract = () => $('stage-hint').classList.add('gone');
-        setTimeout(() => $('stage-hint').classList.add('gone'), 7000);
+        setTimeout(() => $('stage-hint').classList.add('gone'), 12000);
       }
 
       this.initUI();
+      this.bindScroll();
       this.loadBackendData();
     }
 
@@ -889,6 +1147,41 @@
 
     isAnyModalOpen() {
       return !!document.querySelector('.modal-overlay.open');
+    }
+
+    // --- CUỘN TRANG: điều khiển cảnh điện ảnh ---
+    bindScroll() {
+      let ticking = false;
+      const run = () => { ticking = false; this.updateScrollState(); };
+      window.addEventListener('scroll', () => {
+        if (!ticking) { ticking = true; requestAnimationFrame(run); }
+      }, { passive: true });
+      window.addEventListener('resize', run);
+      run();
+    }
+
+    updateScrollState() {
+      const hero = $('hero');
+      const pin = $('hero-pin');
+      const rect = hero.getBoundingClientRect();
+      const total = hero.offsetHeight - pin.offsetHeight;
+      const p = total > 0 ? clamp(-rect.top / total, 0, 1) : 1;
+
+      pin.style.setProperty('--p', p.toFixed(3));
+      pin.style.setProperty('--intro', (1 - clamp(p / 0.28, 0, 1)).toFixed(3));
+      pin.style.setProperty('--panel', clamp((p - 0.2) / 0.3, 0, 1).toFixed(3));
+      pin.classList.toggle('picking', p > CONFIG.PICK_THRESHOLD);
+      if (this.stage.ok) this.stage.setProgress(p);
+
+      // Header: trong suốt trên hero tối, đổi sang nền sáng khi ra khỏi hero
+      $('site-header').classList.toggle('scrolled', rect.bottom <= 70);
+    }
+
+    scrollToPick() {
+      const hero = $('hero');
+      const pin = $('hero-pin');
+      const top = hero.getBoundingClientRect().top + window.scrollY + hero.offsetHeight - pin.offsetHeight;
+      window.scrollTo({ top: top, behavior: prefersReducedMotion ? 'auto' : 'smooth' });
     }
 
     // --- TẢI DỮ LIỆU TỪ GOOGLE APPS SCRIPT ---
@@ -942,7 +1235,9 @@
       this.renderCatalogProducts(null);
       this.updateCartUI();
       if (this.products.length) {
-        this.selectProduct(0);
+        // Mở màn hình bằng một món nổi bật
+        const featuredIdx = this.products.findIndex((p) => isTruthy(p.is_featured));
+        this.selectProduct(featuredIdx >= 0 ? featuredIdx : 0);
       } else {
         $('p-name').textContent = 'Thực đơn đang được cập nhật';
       }
@@ -1047,31 +1342,42 @@
       $('p-ingredients').textContent = p.ingredients || 'Nguyên liệu nhập khẩu chất lượng cao';
       $('p-weight').textContent = p.weight || 'Tiêu chuẩn';
       $('p-counter').textContent = `${this.selectedIndex + 1} / ${n}`;
+
+      const stock = Number(p.stock);
+      const stockEl = $('p-stock');
+      if (stock > 0 && stock <= CONFIG.LOW_STOCK_LIMIT) {
+        stockEl.textContent = `Chỉ còn ${stock} chiếc`;
+        stockEl.hidden = false;
+      } else {
+        stockEl.hidden = true;
+      }
       this.updateDetailQty();
 
-      // Chữ mờ phía sau mô hình
-      const ghost = $('stage-ghost');
-      ghost.classList.add('swap');
-      setTimeout(() => {
-        ghost.textContent = String(p.name).split(' ').slice(0, 2).join(' ');
-        ghost.classList.remove('swap');
-      }, 140);
+      // Ảnh thật (polaroid) + ảnh dự phòng khi máy không hỗ trợ WebGL
+      const pol = $('polaroid');
+      const polImg = $('polaroid-img');
+      delete polImg.dataset.fallbackApplied;
+      polImg.src = p.image_url || PLACEHOLDER_IMG;
+      pol.classList.remove('swap');
+      void pol.offsetWidth;
+      pol.classList.add('swap');
+      const fb = $('stage-fallback-img');
+      delete fb.dataset.fallbackApplied;
+      fb.src = p.image_url || PLACEHOLDER_IMG;
+      fb.alt = p.name;
 
       const type = resolveModelType(p);
-      $('stage-wrap').style.setProperty('--tint', MODEL_TINTS[type] || '#F6DCE2');
-      $('stage-wrap').style.backgroundColor = MODEL_TINTS[type] || '#F6DCE2';
-      const fb = $('stage-fallback-img');
-      fb.src = p.image_url || '';
-      fb.alt = p.name;
-      if (this.stage.ok) this.stage.setModel(type);
+      $('hero-pin').style.setProperty('--glow', MODEL_GLOWS[type] || '#E8457C');
+      if (this.stage.ok) this.stage.setModel(type, parseIngredients(p));
 
       // Đánh dấu thumbnail đang chọn
-      document.querySelectorAll('.thumb').forEach((t, i) => {
+      const thumbs = document.querySelectorAll('.thumb');
+      thumbs.forEach((t, i) => {
         const active = i === this.selectedIndex;
         t.classList.toggle('active', active);
         t.setAttribute('aria-selected', active ? 'true' : 'false');
       });
-      const activeThumb = document.querySelectorAll('.thumb')[this.selectedIndex];
+      const activeThumb = thumbs[this.selectedIndex];
       const rail = $('rail');
       if (activeThumb && rail) {
         const left = activeThumb.offsetLeft - (rail.clientWidth - activeThumb.clientWidth) / 2;
@@ -1083,7 +1389,7 @@
       const rail = $('rail');
       rail.innerHTML = this.products.map((p, i) => `
         <button class="thumb" role="option" aria-selected="false" data-index="${i}" title="${esc(p.name)}">
-          <img src="${esc(p.image_url || '')}" alt="" loading="lazy" width="72" height="72">
+          <img src="${esc(p.image_url || PLACEHOLDER_IMG)}" alt="" loading="lazy" width="70" height="70">
           <span>${esc(p.name)}</span>
         </button>
       `).join('');
@@ -1098,14 +1404,26 @@
 
     // --- UI CONTROLS ---
     initUI() {
-      // Thanh điều hướng 3D
+      // Điều hướng 3D
       $('btn-prev').addEventListener('click', () => this.selectProduct(this.selectedIndex - 1));
       $('btn-next').addEventListener('click', () => this.selectProduct(this.selectedIndex + 1));
       $('btn-zoom-in').addEventListener('click', () => this.stage.ok && this.stage.setZoom(-0.12));
       $('btn-zoom-out').addEventListener('click', () => this.stage.ok && this.stage.setZoom(0.12));
+      $('btn-start').addEventListener('click', () => this.scrollToPick());
       $('rail').addEventListener('click', (e) => {
         const btn = e.target.closest('.thumb');
-        if (btn) this.selectProduct(Number(btn.dataset.index));
+        if (!btn) return;
+        this.selectProduct(Number(btn.dataset.index));
+        // Đang ở phần giới thiệu -> chuyển luôn sang phần chọn bánh
+        if (!$('hero-pin').classList.contains('picking')) this.scrollToPick();
+      });
+
+      // Liên kết "Xem bánh 3D" cuộn tới phần chọn bánh
+      document.querySelectorAll('[data-go="pick"]').forEach((a) => {
+        a.addEventListener('click', (e) => {
+          e.preventDefault();
+          this.scrollToPick();
+        });
       });
 
       // Bàn phím: mũi tên đổi món khi không đang nhập liệu / mở hộp thoại
@@ -1136,9 +1454,11 @@
       $('btn-add-to-cart').addEventListener('click', () => {
         const p = this.products[this.selectedIndex];
         if (!p) return;
-        this.addToCart(p, this.activeQuantity);
+        const qty = this.activeQuantity;
+        this.addToCart(p, qty);
+        this.flyToCart($('btn-add-to-cart'), p.image_url);
         this.sound.playChime();
-        this.showToast(`Đã thêm ${this.activeQuantity} × ${p.name} vào giỏ`);
+        this.showToast(`Đã thêm ${qty} × ${p.name} vào giỏ`);
         this.activeQuantity = 1;
         this.updateDetailQty();
       });
@@ -1152,10 +1472,6 @@
         if (on) this.sound.playDoorBell();
         this.showToast(on ? 'Đã bật âm thanh' : 'Đã tắt âm thanh');
       });
-      const header = $('site-header');
-      const onScroll = () => header.classList.toggle('scrolled', window.scrollY > 8);
-      window.addEventListener('scroll', onScroll, { passive: true });
-      onScroll();
 
       // Menu: xem 3D / thêm giỏ (ủy quyền sự kiện)
       $('catalog-products-grid').addEventListener('click', (e) => {
@@ -1165,10 +1481,12 @@
         if (idx < 0) return;
         if (btn.dataset.act === 'view') {
           this.selectProduct(idx);
-          $('hero').scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'start' });
+          this.scrollToPick();
         } else if (btn.dataset.act === 'add') {
           const p = this.products[idx];
           this.addToCart(p, 1);
+          const card = btn.closest('.m-card');
+          this.flyToCart(card ? card.querySelector('.m-img img') : btn, p.image_url);
           this.sound.playChime();
           this.showToast(`Đã thêm 1 × ${p.name} vào giỏ`);
         }
@@ -1225,6 +1543,43 @@
       });
     }
 
+    // Hiệu ứng ảnh bánh bay vào giỏ hàng
+    flyToCart(fromEl, imgUrl) {
+      const target = $('btn-open-cart');
+      const pop = () => {
+        ['cart-counter', 'bar-cart-counter'].forEach((id) => {
+          const b = $(id);
+          if (!b) return;
+          b.classList.remove('pop');
+          void b.offsetWidth;
+          b.classList.add('pop');
+        });
+      };
+      if (!fromEl || !target || prefersReducedMotion || !fromEl.getBoundingClientRect || !target.animate) {
+        pop();
+        return;
+      }
+      const a = fromEl.getBoundingClientRect();
+      const b = target.getBoundingClientRect();
+      if (!a.width || !b.width) { pop(); return; }
+      const img = document.createElement('img');
+      img.className = 'fly';
+      img.alt = '';
+      img.src = imgUrl || PLACEHOLDER_IMG;
+      img.style.left = (a.left + a.width / 2 - 26) + 'px';
+      img.style.top = (a.top + a.height / 2 - 26) + 'px';
+      document.body.appendChild(img);
+      const dx = (b.left + b.width / 2) - (a.left + a.width / 2);
+      const dy = (b.top + b.height / 2) - (a.top + a.height / 2);
+      const anim = img.animate([
+        { transform: 'translate(0, 0) scale(1)', opacity: 1 },
+        { transform: `translate(${dx * 0.5}px, ${dy * 0.5 - 60}px) scale(0.8)`, opacity: 1, offset: 0.45 },
+        { transform: `translate(${dx}px, ${dy}px) scale(0.2)`, opacity: 0.5 }
+      ], { duration: 750, easing: 'cubic-bezier(0.4, 0, 0.2, 1)' });
+      anim.onfinish = () => { img.remove(); pop(); };
+      anim.oncancel = () => { img.remove(); pop(); };
+    }
+
     copyText(text) {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         return navigator.clipboard.writeText(text).catch(() => this.legacyCopy(text));
@@ -1271,11 +1626,11 @@
         return;
       }
       grid.innerHTML = list.map((p) => {
-        const featured = (p.is_featured === true || p.is_featured === 'TRUE' || p.is_featured === 1);
+        const featured = isTruthy(p.is_featured);
         return `
         <article class="m-card">
           <button class="m-img" data-act="view" data-id="${esc(p.id)}" aria-label="Xem ${esc(p.name)} dạng 3D">
-            <img src="${esc(p.image_url || '')}" alt="${esc(p.name)}" loading="lazy">
+            <img src="${esc(p.image_url || PLACEHOLDER_IMG)}" alt="${esc(p.name)}" loading="lazy">
             ${featured ? '<span class="m-badge">Bán chạy</span>' : ''}
           </button>
           <div class="m-body">
@@ -1309,7 +1664,7 @@
       }
       container.innerHTML = this.cart.map((item, idx) => `
         <div class="cart-item">
-          <img src="${esc(item.product.image_url || '')}" alt="">
+          <img src="${esc(item.product.image_url || PLACEHOLDER_IMG)}" alt="">
           <div class="ci-info">
             <div class="ci-name">${esc(item.product.name)}</div>
             <div class="ci-price">${fmt(item.product.price)} × ${item.quantity}</div>
@@ -1448,6 +1803,7 @@
       // Có bank_code -> tạo VietQR đúng số tiền và nội dung; nếu không dùng ảnh QR tĩnh
       const qrImg = $('success-qr-img');
       qrImg.style.display = '';
+      delete qrImg.dataset.fallbackApplied;
       if (s.bank_code) {
         qrImg.src = `https://img.vietqr.io/image/${encodeURIComponent(s.bank_code)}-${encodeURIComponent(acc)}-compact2.png`
           + `?amount=${encodeURIComponent(Math.round(Number(order.total) || 0))}`
