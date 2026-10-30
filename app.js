@@ -1,10 +1,13 @@
 /**
  * ============================================================================
- * PETIT FOUR — ARTISAN BAKERY · 3D SHOWROOM (v2 — cinematic)
+ * TIỆM BÁNH NHÀ LÀM — WEB ĐẶT BÁNH
  * ============================================================================
- * Công nghệ: Three.js r128, Web Audio API, Vanilla ES6+, Google Sheets Backend
- * Trải nghiệm: cuộn trang để camera dolly quanh bánh -> chọn món -> xoay 360°
- * -> chạm điểm sáng xem nguyên liệu -> thêm giỏ -> đặt hàng / đặt qua app.
+ * Chủ tiệm: Trịnh Thanh Thảo · 0833 236 698
+ * Trải nghiệm:
+ *   - Dải ảnh thật 3D (coverflow): vuốt / kéo ngang để lướt qua từng món
+ *   - Thực đơn dạng cuốn sách: bấm "Thực đơn" rồi lật từng trang
+ *   - Đặt hàng nhanh, đặt qua app giao hàng, nhắn đơn qua Zalo
+ * Công nghệ: Vanilla ES6+, CSS 3D, Web Audio API, Google Sheets Backend
  * ============================================================================
  */
 
@@ -20,156 +23,55 @@
     USE_DEMO_FALLBACK: true,
     ENABLE_SOUND: true,
     API_TIMEOUT_MS: 15000,
-    DRAG_SENSITIVITY: 0.009,
-    AUTO_ROTATE_SPEED: 0.4, // rad / giây
-    AUTO_ROTATE_DELAY_MS: 2200,
-    MODEL_SCALE: 3.6,
-    PICK_THRESHOLD: 0.3, // ngưỡng cuộn để chuyển từ phần giới thiệu sang phần chọn bánh
-    LOW_STOCK_LIMIT: 15  // hiện nhãn "Chỉ còn N chiếc" khi stock <= giá trị này
+    LOW_STOCK_LIMIT: 10, // hiện nhãn "Chỉ còn N chiếc" khi stock <= giá trị này (stock phải > 0)
+    BOOK_PAGE_RATIO: 0.72 // tỉ lệ rộng / cao của một trang sách
   };
 
-  // --- DỮ LIỆU DEMO DỰ PHÒNG ---
+  // --- DỮ LIỆU DEMO DỰ PHÒNG (chỉ dùng khi không kết nối được Google Sheets) ---
   const FALLBACK_CATEGORIES = [
-    { id: 'cat_signature', name: 'Signature Cakes' },
-    { id: 'cat_pastry', name: 'Croissant & Pastry' },
-    { id: 'cat_bread', name: 'Artisan Bread' },
+    { id: 'cat_signature', name: 'Bánh kem' },
+    { id: 'cat_pastry', name: 'Bánh ngàn lớp & bánh ngọt' },
+    { id: 'cat_bread', name: 'Bánh mì' },
     { id: 'cat_cookies', name: 'Macaron & Tart' },
-    { id: 'cat_drinks', name: 'Specialty Drinks' }
+    { id: 'cat_drinks', name: 'Đồ uống' }
   ];
 
   const FALLBACK_PRODUCTS = [
-    {
-      id: 'prod_01', name: 'Butter Croissant Cổ Điển', category: 'cat_pastry', price: 45000,
-      description: 'Bánh sừng bò truyền thống với hàng trăm lớp bơ Pháp thơm lừng giòn rụm.',
-      ingredients: 'Bơ lạt Pháp Elle & Vire, Bột mì T55, Men tươi',
-      flavor: 'Thơm bơ béo nhẹ, vỏ giòn ruột xốp', weight: '85g',
-      image_url: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=800&q=80',
-      model_type: 'croissant', is_featured: true
-    },
-    {
-      id: 'prod_02', name: 'Almond Croissant Nướng Giòn', category: 'cat_pastry', price: 65000,
-      description: 'Croissant ngập kem hạnh nhân frangipane, rắc hạnh nhân lát nướng thơm.',
-      ingredients: 'Bột hạnh nhân Mỹ, Trứng gà tươi, Bơ Pháp, Rượu rum',
-      flavor: 'Ngọt dịu, bùi béo hạnh nhân', weight: '120g',
-      image_url: 'https://images.unsplash.com/photo-1549931319-a545dcf3bc73?auto=format&fit=crop&w=800&q=80',
-      model_type: 'croissant', is_featured: true
-    },
-    {
-      id: 'prod_04', name: 'Strawberry Shortcake Nhật Bản', category: 'cat_signature', price: 85000,
-      description: 'Cốt chiffon mịn mượt như mây kết hợp kem tươi Hokkaido và dâu tây ngọt mát.',
-      ingredients: 'Dâu tây Đà Lạt, Kem sữa Hokkaido, Trứng tươi',
-      flavor: 'Chua ngọt thanh tao, kem mát mịn', weight: '140g',
-      image_url: 'https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&w=800&q=80',
-      model_type: 'strawberry_cake', is_featured: true
-    },
-    {
-      id: 'prod_05', name: 'Bánh Kem Chocolate Truffle', category: 'cat_signature', price: 90000,
-      description: 'Cốt bánh ẩm mọng socola Bỉ phủ lớp kem ganache bóng mượt sánh mịn.',
-      ingredients: 'Chocolate Bỉ 70%, Bột ca cao nguyên chất, Bơ Pháp',
-      flavor: 'Đậm vị ca cao, ngọt vừa sâu lắng', weight: '150g',
-      image_url: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=800&q=80',
-      model_type: 'chocolate_cake', is_featured: true
-    },
-    {
-      id: 'prod_07', name: 'Éclair Chocolate Hạt Phỉ', category: 'cat_pastry', price: 58000,
-      description: 'Bánh vỏ choux dài giòn nhẹ với nhân kem custard socola praline bùi béo.',
-      ingredients: 'Vỏ choux bơ tươi, Kem custard hạt phỉ, Socola glaze',
-      flavor: 'Bùi béo giòn nhẹ bùng nổ hương vị', weight: '90g',
-      image_url: 'https://images.unsplash.com/photo-1612203985729-70726954388c?auto=format&fit=crop&w=800&q=80',
-      model_type: 'eclair'
-    },
-    {
-      id: 'prod_09', name: 'Tart Trái Cây Tươi Mùa Hạ', category: 'cat_cookies', price: 75000,
-      description: 'Đế tart bơ giòn rụm ngập kem vani Madagascar và quả mọng nhiệt đới.',
-      ingredients: 'Vani Madagascar, Quả mâm xôi, Việt quất, Bột hạnh nhân',
-      flavor: 'Vỏ giòn béo, hoa quả chua mọng thanh thoát', weight: '110g',
-      image_url: 'https://images.unsplash.com/photo-1519869325930-281384150729?auto=format&fit=crop&w=800&q=80',
-      model_type: 'tart', is_featured: true
-    },
-    {
-      id: 'prod_11', name: 'Bánh Mì Sourdough Men Rừng', category: 'cat_bread', price: 70000,
-      description: 'Ổ bánh men tự nhiên ủ chậm 36h, vỏ giòn lò nướng đá, ruột ẩm dai mềm.',
-      ingredients: 'Bột mì nguyên cám hữu cơ, Men mẹ tự nhiên 6 năm tuổi',
-      flavor: 'Chua nhẹ hậu vị ngọt lúa mì', weight: '500g',
-      image_url: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=80',
-      model_type: 'bread', is_featured: true
-    },
-    {
-      id: 'prod_14', name: 'Donut Chocolate Caramel Muối', category: 'cat_pastry', price: 38000,
-      description: 'Bánh vòng chiên vàng bông xốp phủ chocolate đen và sốt caramel mặn.',
-      ingredients: 'Bột mì mềm, Socola đen phủ, Muối biển Fleur de Sel',
-      flavor: 'Mặn ngọt hòa quyện, cốt bánh mềm mại', weight: '80g',
-      image_url: 'https://images.unsplash.com/photo-1527515637462-cff94eecc1ac?auto=format&fit=crop&w=800&q=80',
-      model_type: 'donut'
-    },
-    {
-      id: 'prod_16', name: 'Cupcake Hồng Nhung Red Velvet', category: 'cat_pastry', price: 48000,
-      description: 'Cốt bánh đỏ nhung bí ẩn kết hợp kem phô mai Cream Cheese béo ngậy.',
-      ingredients: 'Cream cheese Anchor, Bột cacao, Giấm táo',
-      flavor: 'Chua béo phô mai cân bằng cốt bánh ẩm', weight: '100g',
-      image_url: 'https://images.unsplash.com/photo-1576618148400-f54bed99fcfd?auto=format&fit=crop&w=800&q=80',
-      model_type: 'cupcake', is_featured: true
-    },
-    {
-      id: 'prod_18', name: 'Hộp Macaron Tinh Hoa (6 Vị)', category: 'cat_cookies', price: 160000,
-      description: 'Set 6 chiếc macaron giòn rỗng vỏ: Vani, Matcha, Phúc bồn tử, Socola, Hạt dẻ.',
-      ingredients: 'Bột hạnh nhân Pháp, Trứng gà sạch, Ganache hoa quả',
-      flavor: 'Vỏ giòn tan lập tức tan chảy cùng nhân', weight: '150g',
-      image_url: 'https://images.unsplash.com/photo-1569864321390-38435d67e6b7?auto=format&fit=crop&w=800&q=80',
-      model_type: 'macaron', is_featured: true
-    },
-    {
-      id: 'prod_19', name: 'Cà Phê Latte Hạt Phỉ Thủ Công', category: 'cat_drinks', price: 55000,
-      description: 'Cà phê đặc sản Espresso hòa cùng sữa tươi đánh bông và siro hạt phỉ nướng.',
-      ingredients: 'Arabica Cầu Đất sơ chế ướt, Sữa thanh trùng tươi, Hạt phỉ rang xay',
-      flavor: 'Thơm nồng nàn, êm dịu béo ngậy', weight: '320ml',
-      image_url: 'https://images.unsplash.com/photo-1534778101976-62847782c213?auto=format&fit=crop&w=800&q=80',
-      model_type: 'drink', is_featured: true
-    },
-    {
-      id: 'prod_20', name: 'Trà Hoa Bá Tước Kem Sữa Đào', category: 'cat_drinks', price: 60000,
-      description: 'Trà Earl Grey đẫm hương cam Bergamot, đào ngâm và lớp milkfoam sánh mịn.',
-      ingredients: 'Trà đen Earl Grey, Tinh dầu Bergamot, Đào miếng giòn, Kem béo',
-      flavor: 'Thơm ngát thư giãn, chua ngọt êm ái', weight: '450ml',
-      image_url: 'https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=800&q=80',
-      model_type: 'drink'
-    }
+    { id: 'prod_01', name: 'Butter Croissant Cổ Điển', category: 'cat_pastry', price: 45000, description: 'Bánh sừng bò truyền thống với hàng trăm lớp bơ Pháp thơm lừng giòn rụm.', ingredients: 'Bơ lạt Pháp Elle & Vire, Bột mì T55, Men tươi', flavor: 'Thơm bơ béo nhẹ, vỏ giòn ruột xốp', weight: '85g', image_url: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=800&q=80', is_featured: true, stock: 50 },
+    { id: 'prod_02', name: 'Almond Croissant Nướng Giòn', category: 'cat_pastry', price: 65000, description: 'Croissant ngập kem hạnh nhân frangipane, rắc hạnh nhân lát nướng thơm.', ingredients: 'Bột hạnh nhân Mỹ, Trứng gà tươi, Bơ Pháp, Rượu rum', flavor: 'Ngọt dịu, bùi béo hạnh nhân', weight: '120g', image_url: 'https://images.unsplash.com/photo-1549931319-a545dcf3bc73?auto=format&fit=crop&w=800&q=80', is_featured: true, stock: 30 },
+    { id: 'prod_04', name: 'Strawberry Shortcake Nhật Bản', category: 'cat_signature', price: 85000, description: 'Cốt chiffon mịn mượt như mây kết hợp kem tươi Hokkaido và dâu tây ngọt mát.', ingredients: 'Dâu tây Đà Lạt, Kem sữa Hokkaido, Trứng tươi', flavor: 'Chua ngọt thanh tao, kem mát mịn', weight: '140g', image_url: 'https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&w=800&q=80', is_featured: true, stock: 25 },
+    { id: 'prod_05', name: 'Bánh Kem Chocolate Truffle', category: 'cat_signature', price: 90000, description: 'Cốt bánh ẩm mọng socola Bỉ phủ lớp kem ganache bóng mượt sánh mịn.', ingredients: 'Chocolate Bỉ 70%, Bột ca cao nguyên chất, Bơ Pháp', flavor: 'Đậm vị ca cao, ngọt vừa sâu lắng', weight: '150g', image_url: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=800&q=80', is_featured: true, stock: 20 },
+    { id: 'prod_07', name: 'Éclair Chocolate Hạt Phỉ', category: 'cat_pastry', price: 58000, description: 'Bánh vỏ choux dài giòn nhẹ với nhân kem custard socola praline bùi béo.', ingredients: 'Vỏ choux bơ tươi, Kem custard hạt phỉ, Socola glaze', flavor: 'Bùi béo giòn nhẹ bùng nổ hương vị', weight: '90g', image_url: 'https://images.unsplash.com/photo-1612203985729-70726954388c?auto=format&fit=crop&w=800&q=80', stock: 35 },
+    { id: 'prod_09', name: 'Tart Trái Cây Tươi Mùa Hạ', category: 'cat_cookies', price: 75000, description: 'Đế tart bơ giòn rụm ngập kem vani Madagascar và quả mọng nhiệt đới.', ingredients: 'Vani Madagascar, Quả mâm xôi, Việt quất, Bột hạnh nhân', flavor: 'Vỏ giòn béo, hoa quả chua mọng thanh thoát', weight: '110g', image_url: 'https://images.unsplash.com/photo-1519869325930-281384150729?auto=format&fit=crop&w=800&q=80', is_featured: true, stock: 20 },
+    { id: 'prod_11', name: 'Bánh Mì Sourdough Men Rừng', category: 'cat_bread', price: 70000, description: 'Ổ bánh men tự nhiên ủ chậm 36h, vỏ giòn lò nướng đá, ruột ẩm dai mềm.', ingredients: 'Bột mì nguyên cám hữu cơ, Men mẹ tự nhiên 6 năm tuổi', flavor: 'Chua nhẹ hậu vị ngọt lúa mì', weight: '500g', image_url: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=80', is_featured: true, stock: 15 },
+    { id: 'prod_14', name: 'Donut Chocolate Caramel Muối', category: 'cat_pastry', price: 38000, description: 'Bánh vòng chiên vàng bông xốp phủ chocolate đen và sốt caramel mặn.', ingredients: 'Bột mì mềm, Socola đen phủ, Muối biển Fleur de Sel', flavor: 'Mặn ngọt hòa quyện, cốt bánh mềm mại', weight: '80g', image_url: 'https://images.unsplash.com/photo-1527515637462-cff94eecc1ac?auto=format&fit=crop&w=800&q=80', stock: 40 },
+    { id: 'prod_16', name: 'Cupcake Hồng Nhung Red Velvet', category: 'cat_pastry', price: 48000, description: 'Cốt bánh đỏ nhung bí ẩn kết hợp kem phô mai Cream Cheese béo ngậy.', ingredients: 'Cream cheese Anchor, Bột cacao, Giấm táo', flavor: 'Chua béo phô mai cân bằng cốt bánh ẩm', weight: '100g', image_url: 'https://images.unsplash.com/photo-1576618148400-f54bed99fcfd?auto=format&fit=crop&w=800&q=80', is_featured: true, stock: 30 },
+    { id: 'prod_18', name: 'Hộp Macaron Tinh Hoa (6 Vị)', category: 'cat_cookies', price: 160000, description: 'Set 6 chiếc macaron giòn rỗng vỏ: Vani, Matcha, Phúc bồn tử, Socola, Hạt dẻ.', ingredients: 'Bột hạnh nhân Pháp, Trứng gà sạch, Ganache hoa quả', flavor: 'Vỏ giòn tan lập tức tan chảy cùng nhân', weight: '150g', image_url: 'https://images.unsplash.com/photo-1569864321390-38435d67e6b7?auto=format&fit=crop&w=800&q=80', is_featured: true, stock: 20 },
+    { id: 'prod_19', name: 'Cà Phê Latte Hạt Phỉ Thủ Công', category: 'cat_drinks', price: 55000, description: 'Cà phê đặc sản Espresso hòa cùng sữa tươi đánh bông và siro hạt phỉ nướng.', ingredients: 'Arabica Cầu Đất sơ chế ướt, Sữa thanh trùng tươi, Hạt phỉ rang xay', flavor: 'Thơm nồng nàn, êm dịu béo ngậy', weight: '320ml', image_url: 'https://images.unsplash.com/photo-1534778101976-62847782c213?auto=format&fit=crop&w=800&q=80', is_featured: true, stock: 100 },
+    { id: 'prod_20', name: 'Trà Hoa Bá Tước Kem Sữa Đào', category: 'cat_drinks', price: 60000, description: 'Trà Earl Grey đẫm hương cam Bergamot, đào ngâm và lớp milkfoam sánh mịn.', ingredients: 'Trà đen Earl Grey, Tinh dầu Bergamot, Đào miếng giòn, Kem béo', flavor: 'Thơm ngát thư giãn, chua ngọt êm ái', weight: '450ml', image_url: 'https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=800&q=80', stock: 100 }
   ];
 
   const FALLBACK_SETTINGS = {
-    brand_name: 'PETIT FOUR',
-    brand_subtitle: 'Artisan Bakery & Tea House',
+    brand_name: 'Tiệm bánh nhà làm',
+    brand_subtitle: 'Bánh làm tại nhà, nướng theo đơn',
+    owner_name: 'Trịnh Thanh Thảo',
     currency: 'VND',
-    store_address: 'Số 12 Tràng Tiền, Hoàn Kiếm, Hà Nội',
-    store_phone: '0988 123 456',
-    store_open_hours: '07:30 - 21:30 Mỗi ngày',
+    store_address: '',
+    store_phone: '0833 236 698',
+    store_open_hours: '',
     shipping_fee_default: '25000',
-    bank_name: 'Vietcombank - CN Hoàn Kiếm',
-    bank_code: 'VCB',
-    bank_account_number: '0011004567890',
-    bank_account_holder: 'PETIT FOUR ARTISAN BAKERY',
-    bank_qr_url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80',
-    facebook_url: 'https://facebook.com',
-    zalo_url: 'https://zalo.me',
-    instagram_url: 'https://instagram.com',
+    bank_name: '',
+    bank_code: '',
+    bank_account_number: '',
+    bank_account_holder: 'TRINH THANH THAO',
+    bank_qr_url: '',
+    facebook_url: '',
+    zalo_url: 'https://zalo.me/0833236698',
+    instagram_url: '',
     grabfood_url: '',
     shopeefood_url: '',
     befood_url: '',
     xanhsm_url: ''
-  };
-
-  // Màu ánh sáng nền theo loại bánh (nền sân khấu tối, màu này tạo quầng sáng phía sau)
-  const MODEL_GLOWS = {
-    croissant: '#E0902F',
-    donut: '#E8457C',
-    cupcake: '#E86AA6',
-    strawberry_cake: '#F0506E',
-    chocolate_cake: '#9A5B3A',
-    macaron: '#9C7BDB',
-    bread: '#C9873F',
-    eclair: '#B9783F',
-    tart: '#E8B923',
-    drink: '#4FAF8A'
   };
 
   // Các app giao hàng (thứ tự hiển thị)
@@ -182,9 +84,9 @@
 
   // Ảnh thay thế khi ảnh sản phẩm lỗi / bị chặn
   const PLACEHOLDER_IMG = 'data:image/svg+xml;utf8,' + encodeURIComponent(
-    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">' +
-    '<stop offset="0" stop-color="#F6DCE2"/><stop offset="1" stop-color="#E3D8F2"/></linearGradient></defs>' +
-    '<rect width="200" height="200" fill="url(#g)"/><text x="100" y="128" font-size="84" text-anchor="middle">🥐</text></svg>'
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 250"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">' +
+    '<stop offset="0" stop-color="#FBD9C9"/><stop offset="1" stop-color="#F3E3A9"/></linearGradient></defs>' +
+    '<rect width="200" height="250" fill="url(#g)"/><text x="100" y="145" font-size="84" text-anchor="middle">🧁</text></svg>'
   );
 
   // --- TIỆN ÍCH ---
@@ -194,10 +96,25 @@
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-  const smooth = (x) => { x = clamp(x, 0, 1); return x * x * (3 - 2 * x); };
   const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const isSafeUrl = (u) => /^https?:\/\//i.test(String(u || '').trim());
   const isTruthy = (v) => v === true || v === 'TRUE' || v === 'true' || v === 1;
+  const cssUrl = (u) => 'url("' + String(u).replace(/["\\\n\r]/g, '') + '")';
+
+  // Chuyển link chia sẻ Google Drive thành link ảnh hiển thị được
+  function normImg(u) {
+    u = String(u || '').trim();
+    if (!u) return '';
+    const m = u.match(/drive\.google\.com\/file\/d\/([\w-]+)/) ||
+      u.match(/drive\.google\.com\/(?:open|uc)\?(?:[^#]*&)?id=([\w-]+)/);
+    if (m) return 'https://lh3.googleusercontent.com/d/' + m[1] + '=w1200';
+    return u;
+  }
+
+  // image_url có thể chứa nhiều ảnh, ngăn cách bằng dấu |
+  function getImages(p) {
+    return String(p.image_url || '').split(/[|\n]/).map(normImg).filter(Boolean);
+  }
 
   // Ảnh lỗi -> dùng ảnh thay thế (bắt ở pha capture vì sự kiện error không nổi bọt)
   document.addEventListener('error', (e) => {
@@ -208,28 +125,11 @@
     }
   }, true);
 
-  function resolveModelType(p) {
-    const t = p.model_type;
-    if (p.category === 'cat_drinks' && (!t || t === 'bread')) return 'drink';
-    return t || 'croissant';
-  }
-
-  // Tách nguyên liệu thành các nhãn cho hotspot
-  function parseIngredients(p) {
-    const raw = String(p.ingredients || '');
-    const seen = {};
-    return raw.split(',').map((s) => s.trim()).filter((s) => {
-      if (!s || seen[s.toLowerCase()]) return false;
-      seen[s.toLowerCase()] = true;
-      return true;
-    }).slice(0, window.innerWidth < 640 ? 3 : 4);
-  }
-
-  // --- AUDIO SYNTHESIZER (Web Audio API - không cần file ngoài) ---
+  // --- ÂM THANH (Web Audio API, không cần file ngoài) ---
   class SoundManager {
     constructor() {
       this.ctx = null;
-      this.enabled = false; // mặc định tắt, người dùng chủ động bật
+      this.enabled = false; // mặc định tắt, khách chủ động bật
     }
     init() {
       if (!this.ctx && (window.AudioContext || window.webkitAudioContext)) {
@@ -237,23 +137,47 @@
       }
       if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
     }
-    playDoorBell() {
-      if (!this.enabled) return;
-      this.init();
-      if (!this.ctx) return;
-      const now = this.ctx.currentTime;
-      this.createBeep(880, now, 0.4);
-      this.createBeep(587.33, now + 0.25, 0.6);
-    }
     playChime() {
       if (!this.enabled) return;
       this.init();
       if (!this.ctx) return;
       const now = this.ctx.currentTime;
-      this.createBeep(523.25, now, 0.15);
-      this.createBeep(659.25, now + 0.08, 0.2);
+      this.beep(523.25, now, 0.15);
+      this.beep(659.25, now + 0.08, 0.2);
     }
-    createBeep(freq, time, dur) {
+    playBell() {
+      if (!this.enabled) return;
+      this.init();
+      if (!this.ctx) return;
+      const now = this.ctx.currentTime;
+      this.beep(880, now, 0.4);
+      this.beep(587.33, now + 0.25, 0.6);
+    }
+    // Tiếng sột soạt khi lật trang sách
+    playFlip() {
+      if (!this.enabled) return;
+      this.init();
+      if (!this.ctx) return;
+      try {
+        const ctx = this.ctx;
+        const len = Math.floor(ctx.sampleRate * 0.28);
+        const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+        const d = buf.getChannelData(0);
+        for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2);
+        const src = ctx.createBufferSource();
+        src.buffer = buf;
+        const f = ctx.createBiquadFilter();
+        f.type = 'highpass';
+        f.frequency.value = 1800;
+        const g = ctx.createGain();
+        g.gain.value = 0.14;
+        src.connect(f);
+        f.connect(g);
+        g.connect(ctx.destination);
+        src.start();
+      } catch (e) {}
+    }
+    beep(freq, time, dur) {
       try {
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
@@ -273,843 +197,607 @@
     }
   }
 
-  // --- DỰNG MÔ HÌNH BÁNH PROCEDURAL ---
-  // Quy ước: đáy mỗi món nằm ở y = 0 (mặt đĩa), kích thước khoảng 0.5 đơn vị.
-  class BakeryMeshBuilder {
-    static mat(color, roughness = 0.5, metalness = 0.05) {
-      return new THREE.MeshStandardMaterial({ color: color, roughness: roughness, metalness: metalness });
+  // --- DẢI ẢNH 3D (COVERFLOW) ---
+  // Ảnh thật xếp trên một vòng cung có chiều sâu; kéo / vuốt ngang để lướt, thả tay tự căn vào giữa.
+  class Coverflow {
+    constructor(root, handlers) {
+      this.root = root;
+      this.h = handlers;
+      this.items = [];
+      this.cards = [];
+      this.pos = 0;
+      this.target = 0;
+      this.cur = -1;
+      this.pressed = false;
+      this.dragging = false;
+      this.moved = false;
+      this.raf = 0;
+      this.lastT = 0;
+      this.cw = 280;
+      this.ch = 350;
+      this.spacing = 200;
+      this.wheelAcc = 0;
+      this.lastWheel = 0;
+      this.bind();
+      this.layout();
+      if ('ResizeObserver' in window) new ResizeObserver(() => this.layout()).observe(root);
+      else window.addEventListener('resize', () => this.layout());
     }
 
-    // Vật liệu bóng có lớp phủ (glaze, kem, trái cây) — phản chiếu ánh sáng môi trường
-    static gloss(color, roughness = 0.14, clearcoat = 1) {
-      return new THREE.MeshPhysicalMaterial({
-        color: color, roughness: roughness, metalness: 0.0,
-        clearcoat: clearcoat, clearcoatRoughness: 0.08
-      });
+    setItems(items, startIndex) {
+      this.items = items;
+      this.root.innerHTML = items.map((it, i) => `
+        <div class="cf-card" data-i="${i}" role="option" aria-label="${esc(it.name)}" style="--img:${cssUrl(it.img)}">
+          <div class="cf-inner">
+            <img src="${esc(it.img)}" alt="${esc(it.name)}" draggable="false" ${i < 6 ? '' : 'loading="lazy"'}>
+            ${it.featured ? '<span class="cf-badge">Bán chạy</span>' : ''}
+            <span class="cf-glare"></span>
+          </div>
+          <div class="cf-reflect"></div>
+        </div>`).join('');
+      this.cards = Array.prototype.slice.call(this.root.querySelectorAll('.cf-card'));
+      const start = clamp(startIndex || 0, 0, Math.max(0, items.length - 1));
+      this.pos = this.target = start;
+      this.cur = -1;
+      this.render();
     }
 
-    static pseudo(seed) {
-      const x = Math.sin(seed * 127.1) * 43758.5453;
-      return x - Math.floor(x);
+    layout() {
+      const w = this.root.clientWidth;
+      const h = this.root.clientHeight;
+      if (!w || !h) return;
+      const tall = h > 470;
+      let ch = Math.min(h * (tall ? 0.7 : 0.86), 540);
+      let cw = ch * 0.8;
+      if (cw > w * 0.74) {
+        cw = w * 0.74;
+        ch = cw / 0.8;
+      }
+      this.cw = cw;
+      this.ch = ch;
+      this.spacing = cw * 0.72;
+      this.root.style.setProperty('--cw', cw + 'px');
+      this.root.style.setProperty('--ch', ch + 'px');
+      this.root.style.setProperty('--cy', (tall ? 44 : 50) + '%');
+      this.root.classList.toggle('tall', tall);
+      this.render();
     }
 
-    // 1. Croissant: các đốt bơ nối thành hình lưỡi liềm
-    static createCroissant() {
-      const group = new THREE.Group();
-      const N = 9;
-      const segGeo = new THREE.SphereGeometry(1, 20, 14);
+    goTo(i) {
+      if (!this.items.length) return;
+      this.target = clamp(i, 0, this.items.length - 1);
+      if (this.h.onInteract) this.h.onInteract();
+      this.kick();
+    }
+    next() { this.goTo(Math.round(this.target) + 1); }
+    prev() { this.goTo(Math.round(this.target) - 1); }
+    get index() { return this.cur; }
+
+    kick() {
+      if (this.raf) return;
+      this.lastT = performance.now();
+      this.raf = requestAnimationFrame((t) => this.tick(t));
+    }
+
+    tick(t) {
+      const dt = Math.min((t - this.lastT) / 1000, 0.05);
+      this.lastT = t;
+      this.raf = 0;
+      if (!this.dragging) {
+        const k = 1 - Math.exp(-dt * (prefersReducedMotion ? 60 : 9));
+        this.pos += (this.target - this.pos) * k;
+        if (Math.abs(this.target - this.pos) < 0.001) this.pos = this.target;
+      }
+      this.render();
+      if (this.dragging || this.pos !== this.target) this.kick();
+    }
+
+    render() {
+      const N = this.items.length;
+      if (!N) return;
       for (let i = 0; i < N; i++) {
-        const t = i / (N - 1);
-        const a = (t - 0.5) * 2.2;
-        const s = 0.05 + 0.075 * Math.sin(Math.PI * t);
-        const seg = new THREE.Mesh(segGeo, this.gloss(i % 2 ? 0xC9894A : 0xDB9D5C, 0.38, 0.35));
-        seg.scale.set(0.088, s, s * 1.05);
-        seg.position.set(Math.sin(a) * 0.27, s * 0.95, -Math.cos(a) * 0.2 + 0.19);
-        seg.rotation.y = -a;
-        group.add(seg);
+        const card = this.cards[i];
+        if (!card) continue;
+        const o = i - this.pos;
+        const ao = Math.abs(o);
+        const sgn = o < 0 ? -1 : 1;
+        const near = Math.min(ao, 1);
+        const far = Math.max(ao - 1, 0);
+        const tx = sgn * (near * this.cw * 0.74 + far * this.cw * 0.3);
+        const tz = -(near * 170 + far * 80);
+        const ry = -sgn * near * 52;
+        const opacity = ao > 3.6 ? 0 : (ao > 2.3 ? 1 - (ao - 2.3) / 1.3 : 1);
+        card.style.transform = `translate3d(${tx.toFixed(1)}px, 0, ${tz.toFixed(1)}px) rotateY(${ry.toFixed(1)}deg)`;
+        card.style.opacity = opacity.toFixed(2);
+        card.style.zIndex = String(100 - Math.round(ao * 10));
+        card.style.visibility = opacity <= 0 ? 'hidden' : 'visible';
+        card.style.pointerEvents = ao > 3 ? 'none' : 'auto';
+        card.style.setProperty('--dim', (near * 0.42).toFixed(2));
       }
-      return group;
-    }
-
-    // 2. Donut tráng men hồng + cốm màu
-    static createDonut() {
-      const group = new THREE.Group();
-      const dough = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.1, 18, 40), this.mat(0xE2AE72, 0.6));
-      dough.rotation.x = Math.PI / 2;
-      dough.position.y = 0.1;
-      group.add(dough);
-
-      const glaze = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.104, 18, 40), this.gloss(0xDE5D83, 0.1));
-      glaze.rotation.x = Math.PI / 2;
-      glaze.scale.set(1, 1, 0.55);
-      glaze.position.y = 0.145;
-      group.add(glaze);
-
-      const colors = [0xFFFFFF, 0xFFD34D, 0x6FC3E8, 0x8AD18A, 0xFFF0B3];
-      const sprinkleGeo = new THREE.BoxGeometry(0.05, 0.012, 0.014);
-      for (let i = 0; i < 18; i++) {
-        const ang = this.pseudo(i + 1) * Math.PI * 2;
-        const r = 0.22 + (this.pseudo(i + 40) - 0.5) * 0.1;
-        const sp = new THREE.Mesh(sprinkleGeo, this.mat(colors[i % colors.length], 0.4));
-        sp.position.set(Math.cos(ang) * r, 0.196, Math.sin(ang) * r);
-        sp.rotation.y = this.pseudo(i + 80) * Math.PI;
-        group.add(sp);
+      const idx = clamp(Math.round(this.pos), 0, N - 1);
+      if (idx !== this.cur) {
+        if (this.cards[this.cur]) this.cards[this.cur].classList.remove('is-center');
+        this.cur = idx;
+        this.cards[idx].classList.add('is-center');
+        if (this.h.onChange) this.h.onChange(idx);
       }
-      return group;
     }
 
-    // 3. Cupcake với kem xoắn và cherry
-    static createCupcake() {
-      const group = new THREE.Group();
-      const inner = new THREE.Group();
-      const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.13, 0.2, 28), this.mat(0xB35C6A, 0.8));
-      inner.add(cup);
+    bind() {
+      const root = this.root;
+      let startX = 0, startPos = 0, lastX = 0, lastTime = 0, vel = 0, downCard = null;
 
-      const creamMat = this.gloss(0xFDFBF7, 0.3, 0.4);
-      const l1 = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.21, 0.08, 28), creamMat);
-      l1.position.y = 0.12;
-      const l2 = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.18, 0.08, 24), creamMat);
-      l2.position.y = 0.18;
-      const l3 = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.12, 20), creamMat);
-      l3.position.y = 0.26;
-      inner.add(l1, l2, l3);
-
-      const cherry = new THREE.Mesh(new THREE.SphereGeometry(0.045, 20, 20), this.gloss(0xB31B1B, 0.08));
-      cherry.position.y = 0.33;
-      inner.add(cherry);
-
-      inner.position.y = 0.1;
-      group.add(inner);
-      return group;
-    }
-
-    // 4. Strawberry shortcake
-    static createStrawberryCake() {
-      const group = new THREE.Group();
-      const inner = new THREE.Group();
-      const spongeMat = this.mat(0xF7E4B2, 0.6);
-      const creamMat = this.gloss(0xFFFFFF, 0.25, 0.5);
-
-      const s1 = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.08, 0.36), spongeMat);
-      const c1 = new THREE.Mesh(new THREE.BoxGeometry(0.37, 0.04, 0.37), creamMat);
-      c1.position.y = 0.06;
-      const s2 = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.08, 0.36), spongeMat);
-      s2.position.y = 0.12;
-      const c2 = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.05, 0.38), creamMat);
-      c2.position.y = 0.18;
-      inner.add(s1, c1, s2, c2);
-
-      const strawMat = this.gloss(0xDC2626, 0.1);
-      const leafMat = this.mat(0x3F8F4A, 0.6);
-      [[-0.08, -0.04], [0.09, 0.06]].forEach((p) => {
-        const berry = new THREE.Mesh(new THREE.SphereGeometry(0.06, 20, 16), strawMat);
-        berry.scale.set(1, 1.15, 1);
-        berry.position.set(p[0], 0.25, p[1]);
-        const leaf = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.03, 6), leafMat);
-        leaf.position.set(p[0], 0.325, p[1]);
-        inner.add(berry, leaf);
+      root.addEventListener('pointerdown', (e) => {
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        this.pressed = true;
+        this.moved = false;
+        this.dragging = false;
+        startX = lastX = e.clientX;
+        startPos = this.pos;
+        lastTime = performance.now();
+        vel = 0;
+        downCard = e.target.closest ? e.target.closest('.cf-card') : null;
       });
 
-      inner.position.y = 0.04;
-      group.add(inner);
-      return group;
-    }
-
-    // 5. Chocolate cake nhiều tầng, có ganache chảy
-    static createChocolateCake() {
-      const group = new THREE.Group();
-      const inner = new THREE.Group();
-      const chocoSponge = this.mat(0x382017, 0.7);
-      const chocoCream = this.gloss(0x22110B, 0.12);
-
-      const s1 = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.1, 0.38), chocoSponge);
-      const c1 = new THREE.Mesh(new THREE.BoxGeometry(0.39, 0.04, 0.39), chocoCream);
-      c1.position.y = 0.07;
-      const s2 = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.1, 0.38), chocoSponge);
-      s2.position.y = 0.14;
-      const glaze = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.03, 0.4), chocoCream);
-      glaze.position.y = 0.2;
-      inner.add(s1, c1, s2, glaze);
-
-      // Ganache chảy xuống thành bánh
-      let seed = 3;
-      for (let side = 0; side < 4; side++) {
-        const nx = Math.cos(side * Math.PI / 2);
-        const nz = Math.sin(side * Math.PI / 2);
-        const tx = -nz;
-        const tz = nx;
-        for (let k = 0; k < 3; k++) {
-          const off = -0.12 + k * 0.12;
-          const len = 0.05 + this.pseudo(seed++) * 0.08;
-          const drip = new THREE.Mesh(new THREE.CylinderGeometry(0.017, 0.017, len, 10), chocoCream);
-          drip.position.set(nx * 0.201 + tx * off, 0.215 - len / 2, nz * 0.201 + tz * off);
-          const tip = new THREE.Mesh(new THREE.SphereGeometry(0.019, 10, 10), chocoCream);
-          tip.position.set(nx * 0.201 + tx * off, 0.215 - len, nz * 0.201 + tz * off);
-          inner.add(drip, tip);
+      root.addEventListener('pointermove', (e) => {
+        if (!this.pressed) {
+          this.tilt(e);
+          return;
         }
-      }
+        const dx = e.clientX - startX;
+        if (!this.moved && Math.abs(dx) > 6) {
+          this.moved = true;
+          this.dragging = true;
+          root.classList.add('dragging');
+          try { root.setPointerCapture(e.pointerId); } catch (err) {}
+          if (this.h.onInteract) this.h.onInteract();
+        }
+        if (this.dragging) {
+          const now = performance.now();
+          const dt = Math.max(1, now - lastTime);
+          const inst = -((e.clientX - lastX) / this.spacing) / (dt / 1000);
+          vel = vel * 0.7 + inst * 0.3;
+          lastX = e.clientX;
+          lastTime = now;
+          this.pos = clamp(startPos - dx / this.spacing, -0.35, this.items.length - 0.65);
+          this.kick();
+        }
+      });
 
-      const curlMat = this.gloss(0x6A3F2B, 0.3);
-      for (let i = 0; i < 4; i++) {
-        const curl = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.12, 10), curlMat);
-        curl.rotation.z = Math.PI / 2;
-        curl.rotation.y = i * 0.7;
-        curl.position.set(-0.06 + i * 0.05, 0.235, -0.03 + (i % 2) * 0.06);
-        inner.add(curl);
-      }
-      const gold = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.006, 0.04), this.mat(0xD4AF37, 0.25, 0.8));
-      gold.position.set(0.1, 0.221, 0.1);
-      gold.rotation.y = 0.5;
-      inner.add(gold);
-
-      inner.position.y = 0.05;
-      group.add(inner);
-      return group;
-    }
-
-    // 6. Macaron: ba chiếc nhiều màu
-    static createMacaron() {
-      const group = new THREE.Group();
-      const makeMac = (shellColor) => {
-        const m = new THREE.Group();
-        const shellMat = this.gloss(shellColor, 0.35, 0.3);
-        const top = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.17, 0.06, 32), shellMat);
-        top.position.y = 0.05;
-        const bot = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.18, 0.06, 32), shellMat);
-        bot.position.y = -0.05;
-        const fill = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.04, 32), this.mat(0xFFF3E0, 0.3));
-        m.add(top, fill, bot);
-        m.position.y = 0.08;
-        return m;
+      const end = () => {
+        if (!this.pressed) return;
+        this.pressed = false;
+        root.classList.remove('dragging');
+        if (this.dragging) {
+          this.dragging = false;
+          const projected = this.pos + vel * 0.2;
+          this.target = clamp(Math.round(projected), 0, this.items.length - 1);
+          this.kick();
+        } else if (!this.moved && downCard) {
+          const i = Number(downCard.dataset.i);
+          if (i === this.cur) {
+            if (this.h.onOpen) this.h.onOpen(i);
+          } else {
+            this.goTo(i);
+          }
+        }
+        downCard = null;
       };
-      const spots = [
-        [-0.14, 0.08, 0xF4A7B9],
-        [0.14, 0.08, 0x9CCB86],
-        [0, -0.13, 0xB9A3E3]
-      ];
-      spots.forEach((s) => {
-        const wrap = new THREE.Group();
-        wrap.add(makeMac(s[2]));
-        wrap.scale.setScalar(0.7);
-        wrap.position.set(s[0], 0.0, s[1]);
-        group.add(wrap);
-      });
-      return group;
-    }
+      root.addEventListener('pointerup', end);
+      root.addEventListener('pointercancel', end);
+      root.addEventListener('lostpointercapture', end);
 
-    // 7. Bánh mì nướng nâu có đường rạch
-    static createBreadLoaf() {
-      const group = new THREE.Group();
-      const bread = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 20), this.mat(0xA8602A, 0.7));
-      bread.scale.set(0.3, 0.13, 0.17);
-      bread.position.y = 0.12;
-      group.add(bread);
+      root.addEventListener('pointerleave', () => this.resetTilt());
 
-      const slashMat = this.mat(0xF1DFC2, 0.8);
-      [-0.1, 0, 0.1].forEach((x) => {
-        const slash = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.012, 0.022), slashMat);
-        slash.position.set(x, 0.12 + 0.13 * Math.sqrt(1 - Math.pow(x / 0.3, 2)) - 0.002, 0);
-        slash.rotation.y = 0.9;
-        group.add(slash);
-      });
-      return group;
-    }
-
-    // 8. Éclair phủ socola
-    static createEclair() {
-      const group = new THREE.Group();
-      const body = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 18), this.mat(0xD9A566, 0.5));
-      body.scale.set(0.27, 0.085, 0.092);
-      body.position.y = 0.085;
-      group.add(body);
-
-      const glaze = new THREE.Mesh(
-        new THREE.SphereGeometry(1, 32, 14, 0, Math.PI * 2, 0, Math.PI / 2),
-        this.gloss(0x2A1810, 0.1)
-      );
-      glaze.scale.set(0.262, 0.065, 0.098);
-      glaze.position.y = 0.11;
-      group.add(glaze);
-      return group;
-    }
-
-    // 9. Tart hoa quả
-    static createTart() {
-      const group = new THREE.Group();
-      const inner = new THREE.Group();
-      const crust = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.19, 0.08, 36), this.mat(0xC68642, 0.6));
-      inner.add(crust);
-
-      const filling = new THREE.Mesh(new THREE.CylinderGeometry(0.21, 0.21, 0.03, 32), this.gloss(0xFDEE87, 0.2, 0.6));
-      filling.position.y = 0.04;
-      inner.add(filling);
-
-      const berryMat = this.gloss(0x9E1B4A, 0.12);
-      for (let i = 0; i < 6; i++) {
-        const ang = (i / 6) * Math.PI * 2;
-        const berry = new THREE.Mesh(new THREE.SphereGeometry(0.04, 16, 16), berryMat);
-        berry.position.set(Math.cos(ang) * 0.12, 0.075, Math.sin(ang) * 0.12);
-        inner.add(berry);
-      }
-      const blue = new THREE.Mesh(new THREE.SphereGeometry(0.045, 16, 16), this.gloss(0x3B4B9A, 0.15));
-      blue.position.set(0, 0.078, 0);
-      const mint = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.05, 6), this.mat(0x4F8F5A, 0.6));
-      mint.position.set(0.04, 0.105, 0.03);
-      mint.rotation.z = -0.8;
-      inner.add(blue, mint);
-
-      inner.position.y = 0.04;
-      group.add(inner);
-      return group;
-    }
-
-    // 10. Đồ uống: tách cà phê latte
-    static createDrink() {
-      const group = new THREE.Group();
-      const ceramic = new THREE.MeshPhysicalMaterial({ color: 0xFFFFFF, roughness: 0.15, clearcoat: 1, clearcoatRoughness: 0.05, side: THREE.DoubleSide });
-
-      const saucer = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.22, 0.02, 40), ceramic);
-      saucer.position.y = 0.01;
-      group.add(saucer);
-
-      const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.12, 0.2, 40, 1, true), ceramic);
-      cup.position.y = 0.12;
-      group.add(cup);
-      const cupBottom = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.01, 40), ceramic);
-      cupBottom.position.y = 0.025;
-      group.add(cupBottom);
-
-      const coffee = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.01, 40), this.gloss(0x7A4A2B, 0.2));
-      coffee.position.y = 0.19;
-      group.add(coffee);
-
-      const art = new THREE.Mesh(new THREE.TorusGeometry(0.07, 0.022, 12, 32), this.mat(0xF5E6D0, 0.4));
-      art.rotation.x = Math.PI / 2;
-      art.position.y = 0.197;
-      const artDot = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.004, 24), this.mat(0xF5E6D0, 0.4));
-      artDot.position.y = 0.196;
-      group.add(art, artDot);
-
-      const handle = new THREE.Mesh(new THREE.TorusGeometry(0.065, 0.017, 12, 24, Math.PI), ceramic);
-      handle.position.set(0.17, 0.125, 0);
-      handle.rotation.z = -Math.PI / 2;
-      group.add(handle);
-      return group;
-    }
-
-    // Factory theo model_type, đặt trên đĩa sứ
-    static build(modelType) {
-      let pastry;
-      switch (modelType) {
-        case 'croissant': pastry = this.createCroissant(); break;
-        case 'donut': pastry = this.createDonut(); break;
-        case 'cupcake': pastry = this.createCupcake(); break;
-        case 'strawberry_cake': pastry = this.createStrawberryCake(); break;
-        case 'chocolate_cake': pastry = this.createChocolateCake(); break;
-        case 'macaron': pastry = this.createMacaron(); break;
-        case 'bread': pastry = this.createBreadLoaf(); break;
-        case 'eclair': pastry = this.createEclair(); break;
-        case 'tart': pastry = this.createTart(); break;
-        case 'drink': pastry = this.createDrink(); break;
-        default: pastry = this.createCroissant();
-      }
-
-      const holder = new THREE.Group();
-      if (modelType !== 'drink') {
-        const plate = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.34, 0.26, 0.025, 48),
-          new THREE.MeshPhysicalMaterial({ color: 0xFAF8F5, roughness: 0.18, clearcoat: 1, clearcoatRoughness: 0.06 })
-        );
-        plate.position.y = -0.0125;
-        holder.add(plate);
-      }
-      holder.add(pastry);
-      holder.traverse((o) => {
-        if (o.isMesh) {
-          o.castShadow = true;
-          o.receiveShadow = true;
+      // Cuộn ngang bằng touchpad / chuột có con lăn ngang
+      root.addEventListener('wheel', (e) => {
+        if (Math.abs(e.deltaX) > Math.abs(e.deltaY) && Math.abs(e.deltaX) > 2) {
+          e.preventDefault();
+          this.wheelAcc += e.deltaX;
+          const now = performance.now();
+          if (Math.abs(this.wheelAcc) > 50 && now - this.lastWheel > 180) {
+            this.goTo(Math.round(this.target) + (this.wheelAcc > 0 ? 1 : -1));
+            this.wheelAcc = 0;
+            this.lastWheel = now;
+          }
         }
+      }, { passive: false });
+    }
+
+    // Nghiêng nhẹ tấm ảnh ở giữa theo con trỏ chuột, có ánh phản chiếu
+    tilt(e) {
+      if (e.pointerType !== 'mouse' || prefersReducedMotion) return;
+      const card = this.cards[this.cur];
+      if (!card) return;
+      const inner = card.querySelector('.cf-inner');
+      const r = card.getBoundingClientRect();
+      if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) {
+        this.resetTilt();
+        return;
+      }
+      const px = (e.clientX - r.left) / r.width;
+      const py = (e.clientY - r.top) / r.height;
+      inner.style.transform = `rotateX(${((0.5 - py) * 8).toFixed(2)}deg) rotateY(${((px - 0.5) * 10).toFixed(2)}deg)`;
+      inner.style.setProperty('--gx', (px * 100).toFixed(0) + '%');
+      inner.style.setProperty('--gy', (py * 100).toFixed(0) + '%');
+    }
+
+    resetTilt() {
+      this.cards.forEach((c) => {
+        const inner = c.firstElementChild;
+        if (inner && inner.style.transform) inner.style.transform = '';
       });
-      return holder;
     }
   }
 
-  // --- SÂN KHẤU 3D ---
-  // Camera dolly theo tiến độ cuộn (progress), xoay bằng kéo chuột / chạm,
-  // hotspot nguyên liệu gắn vào mô hình, hạt lấp lánh và hiệu ứng nổ khi đổi món.
-  class ShowcaseStage {
-    constructor(canvas, wrap, hotspotLayer) {
-      this.canvas = canvas;
-      this.wrap = wrap;
-      this.hotspotLayer = hotspotLayer;
-      this.ok = false;
-      this.visible = true;
-      this.model = null;
-      this.currentType = null;
-      this.pending = null;
-      this.pendingLabels = [];
-      this.trans = null;
-      this.curScale = 0.001;
-      this.rotY = 0.7;
-      this.rotX = 0.14;
-      this.velY = 0;
-      this.dragging = false;
-      this.zoom = 1;
-      this.progress = 0;
-      this.curP = 0;
-      this.px = 0; this.py = 0; // vị trí con trỏ (parallax)
-      this.tpx = 0; this.tpy = 0;
-      this.hsEls = [];
-      this.anchors = [];
-      this.burstLife = 99;
-      this.lastInteract = performance.now() - CONFIG.AUTO_ROTATE_DELAY_MS;
-      this.onFirstInteract = null;
-      this.camTarget = new THREE.Vector3(0, 0.55, 0);
-
-      if (typeof THREE === 'undefined') return;
-      try {
-        this.renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
-      } catch (e) {
-        return;
-      }
-
-      const r = this.renderer;
-      const isSmall = window.innerWidth < 640;
-      r.setPixelRatio(Math.min(window.devicePixelRatio || 1, isSmall ? 1.75 : 2));
-      r.shadowMap.enabled = true;
-      r.shadowMap.type = THREE.PCFSoftShadowMap;
-      r.outputEncoding = THREE.sRGBEncoding;
-      r.toneMapping = THREE.ACESFilmicToneMapping;
-      r.toneMappingExposure = 1.0;
-      r.setClearColor(0x000000, 0);
-
-      this.scene = new THREE.Scene();
-      this.camera = new THREE.PerspectiveCamera(34, 1, 0.1, 60);
-
-      this.buildEnvironment();
-      this.buildScene();
-      this.bindEvents();
-      this.resize();
-      this.ok = true;
-      this.clock = new THREE.Clock();
-      this.loop();
+  // --- THỰC ĐƠN DẠNG CUỐN SÁCH ---
+  // Máy tính: hai trang một lần mở. Điện thoại: một trang, lật từng trang.
+  class MenuBook {
+    constructor(app) {
+      this.app = app;
+      this.overlay = $('book-overlay');
+      this.stage = $('bk-stage');
+      this.book = $('book');
+      this.pages = [];
+      this.leaves = [];
+      this.toc = [];
+      this.s = 0;
+      this.L = 0;
+      this.maxS = 0;
+      this.mode = 'double';
+      this.pw = 300;
+      this.ph = 420;
+      this.isOpen = false;
+      this.autoTimer = 0;
+      this.bind();
     }
 
-    // Môi trường phản chiếu kiểu studio (softbox) để lớp glaze, kem, sứ có ánh bóng thật
-    buildEnvironment() {
-      try {
-        const pm = new THREE.PMREMGenerator(this.renderer);
-        const es = new THREE.Scene();
-        es.background = new THREE.Color(0x0a0610);
-        const box = (w, h, rgb, pos) => {
-          const m = new THREE.Mesh(
-            new THREE.PlaneGeometry(w, h),
-            new THREE.MeshBasicMaterial({ color: new THREE.Color(rgb[0], rgb[1], rgb[2]), side: THREE.DoubleSide })
-          );
-          m.position.set(pos[0], pos[1], pos[2]);
-          m.lookAt(0, 0, 0);
-          es.add(m);
-        };
-        box(8, 5, [7, 5.5, 4], [3, 6, 4]);      // softbox chính ấm
-        box(2, 9, [2.5, 3, 5], [-7, 2, 1]);     // dải sáng lạnh bên trái
-        box(9, 2, [3, 3, 3], [0, 8, -2]);       // đèn trần
-        box(5, 3, [1.6, 1.1, 0.9], [0, 1, -8]); // ánh nền phía sau
-        this.envMap = pm.fromScene(es, 0.04).texture;
-        this.scene.environment = this.envMap;
-        pm.dispose();
-      } catch (e) {
-        console.warn('Không tạo được môi trường phản chiếu:', e);
-      }
-    }
+    get wantDouble() { return window.innerWidth >= 900; }
 
-    makeSpriteTexture() {
-      const c = document.createElement('canvas');
-      c.width = c.height = 64;
-      const g = c.getContext('2d');
-      const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
-      grad.addColorStop(0, 'rgba(255,255,255,1)');
-      grad.addColorStop(0.35, 'rgba(255,255,255,0.6)');
-      grad.addColorStop(1, 'rgba(255,255,255,0)');
-      g.fillStyle = grad;
-      g.fillRect(0, 0, 64, 64);
-      return new THREE.CanvasTexture(c);
-    }
+    bind() {
+      $('bk-close').addEventListener('click', () => this.close());
+      $('bk-prev').addEventListener('click', () => this.setState(this.s - 1, true));
+      $('bk-next').addEventListener('click', () => this.setState(this.s + 1, true));
+      $('bk-toc').addEventListener('click', () => this.jumpToPage(1));
+      $('bk-cart').addEventListener('click', () => this.app.openCheckoutModal());
 
-    buildScene() {
-      this.scene.add(new THREE.HemisphereLight(0xffffff, 0x3A2340, 0.35));
-
-      const key = new THREE.SpotLight(0xFFE2BE, 1.7, 30, 0.55, 0.65, 1);
-      key.position.set(2.8, 6.5, 3.4);
-      key.target.position.set(0, 0.5, 0);
-      key.castShadow = true;
-      key.shadow.mapSize.set(1024, 1024);
-      key.shadow.bias = -0.0004;
-      this.scene.add(key, key.target);
-
-      const rim = new THREE.DirectionalLight(0xB7C7FF, 0.7);
-      rim.position.set(-4, 3, -3.5);
-      this.scene.add(rim);
-
-      // Bục trưng bày: mặt tối bóng + viền sáng
-      const podium = new THREE.Mesh(
-        new THREE.CylinderGeometry(1.5, 1.55, 0.3, 80),
-        new THREE.MeshStandardMaterial({ color: 0x241528, roughness: 0.2, metalness: 0.65 })
-      );
-      podium.position.y = -0.15;
-      podium.receiveShadow = true;
-      this.scene.add(podium);
-
-      const ring = new THREE.Mesh(
-        new THREE.TorusGeometry(1.5, 0.014, 10, 120),
-        new THREE.MeshBasicMaterial({ color: 0xFFB86B })
-      );
-      ring.rotation.x = Math.PI / 2;
-      ring.position.y = 0.002;
-      this.scene.add(ring);
-
-      const base = new THREE.Mesh(
-        new THREE.CylinderGeometry(1.8, 1.8, 0.1, 80),
-        new THREE.MeshStandardMaterial({ color: 0x150C1A, roughness: 0.5, metalness: 0.4 })
-      );
-      base.position.y = -0.35;
-      base.receiveShadow = true;
-      this.scene.add(base);
-
-      // Nhóm xoay chứa món bánh
-      this.pivot = new THREE.Group();
-      this.scene.add(this.pivot);
-
-      // Hạt lấp lánh (bụi bột / đường)
-      this.spriteTex = this.makeSpriteTexture();
-      const count = 90;
-      const pos = new Float32Array(count * 3);
-      for (let i = 0; i < count; i++) {
-        pos[i * 3] = (Math.random() - 0.5) * 7;
-        pos[i * 3 + 1] = Math.random() * 3.4;
-        pos[i * 3 + 2] = (Math.random() - 0.5) * 4.5;
-      }
-      const geo = new THREE.BufferGeometry();
-      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-      this.dust = new THREE.Points(geo, new THREE.PointsMaterial({
-        map: this.spriteTex, color: 0xFFD9A0, size: 0.14, transparent: true, opacity: 0.8,
-        depthWrite: false, blending: THREE.AdditiveBlending
-      }));
-      this.scene.add(this.dust);
-
-      // Hạt nổ khi đổi món
-      const bn = 48;
-      const bpos = new Float32Array(bn * 3);
-      this.burstVel = new Float32Array(bn * 3);
-      const bgeo = new THREE.BufferGeometry();
-      bgeo.setAttribute('position', new THREE.BufferAttribute(bpos, 3));
-      this.burstPts = new THREE.Points(bgeo, new THREE.PointsMaterial({
-        map: this.spriteTex, color: 0xFFE3B0, size: 0.16, transparent: true, opacity: 0,
-        depthWrite: false, blending: THREE.AdditiveBlending
-      }));
-      this.burstPts.visible = false;
-      this.burstPts.frustumCulled = false;
-      this.scene.add(this.burstPts);
-    }
-
-    bindEvents() {
-      const c = this.canvas;
-      c.addEventListener('pointerdown', (e) => {
-        this.dragging = true;
-        this.lastX = e.clientX;
-        this.lastY = e.clientY;
-        this.velY = 0;
-        this.markInteract();
-        try { c.setPointerCapture(e.pointerId); } catch (err) {}
-        c.classList.add('grabbing');
-      });
-      c.addEventListener('pointermove', (e) => {
-        if (!this.dragging) return;
-        const dx = e.clientX - this.lastX;
-        const dy = e.clientY - this.lastY;
-        this.lastX = e.clientX;
-        this.lastY = e.clientY;
-        const delta = dx * CONFIG.DRAG_SENSITIVITY;
-        this.rotY += delta;
-        this.velY = delta;
-        if (e.pointerType === 'mouse') {
-          this.rotX = clamp(this.rotX + dy * CONFIG.DRAG_SENSITIVITY * 0.6, -0.12, 0.65);
+      // Thao tác bên trong các trang sách
+      this.book.addEventListener('click', (e) => {
+        const addBtn = e.target.closest('[data-add]');
+        if (addBtn) {
+          this.app.addById(addBtn.dataset.add, 1, addBtn, true);
+          return;
         }
-        this.markInteract();
-      });
-      const end = () => {
-        this.dragging = false;
-        c.classList.remove('grabbing');
-        this.markInteract();
-      };
-      c.addEventListener('pointerup', end);
-      c.addEventListener('pointercancel', end);
-      c.addEventListener('lostpointercapture', end);
-
-      // Parallax camera theo con trỏ (chỉ có ý nghĩa với chuột)
-      window.addEventListener('pointermove', (e) => {
-        if (e.pointerType !== 'mouse') return;
-        this.tpx = (e.clientX / window.innerWidth) * 2 - 1;
-        this.tpy = (e.clientY / window.innerHeight) * 2 - 1;
-      });
-
-      // Bàn phím: Shift + mũi tên để xoay khi canvas đang focus
-      c.setAttribute('tabindex', '0');
-      c.addEventListener('keydown', (e) => {
-        if (e.key === 'ArrowLeft' && e.shiftKey) { this.rotY -= 0.2; this.markInteract(); }
-        if (e.key === 'ArrowRight' && e.shiftKey) { this.rotY += 0.2; this.markInteract(); }
+        const detailBtn = e.target.closest('[data-detail]');
+        if (detailBtn) {
+          this.app.openDetail(detailBtn.dataset.detail);
+          return;
+        }
+        const jump = e.target.closest('[data-jump]');
+        if (jump) {
+          this.jumpToPage(Number(jump.dataset.jump));
+          return;
+        }
+        if (e.target.closest('[data-flip="next"]')) {
+          this.setState(this.s + 1, true);
+          return;
+        }
+        if (e.target.closest('[data-act="open-cart"]')) {
+          this.app.openCheckoutModal();
+        }
       });
 
-      if ('ResizeObserver' in window) {
-        new ResizeObserver(() => this.resize()).observe(this.wrap);
+      // Vuốt ngang để lật trang
+      let sx = 0, sy = 0, st = 0, tracking = false;
+      this.stage.addEventListener('pointerdown', (e) => {
+        tracking = true;
+        sx = e.clientX;
+        sy = e.clientY;
+        st = performance.now();
+      });
+      this.stage.addEventListener('pointerup', (e) => {
+        if (!tracking) return;
+        tracking = false;
+        const dx = e.clientX - sx;
+        const dy = e.clientY - sy;
+        if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.4 && performance.now() - st < 900) {
+          this.setState(this.s + (dx < 0 ? 1 : -1), true);
+        }
+      });
+      this.stage.addEventListener('pointercancel', () => { tracking = false; });
+
+      let rt = 0;
+      window.addEventListener('resize', () => {
+        clearTimeout(rt);
+        rt = setTimeout(() => {
+          if (!this.isOpen) return;
+          if ((this.wantDouble ? 'double' : 'single') !== this.mode) {
+            const p = this.currentPage();
+            this.build();
+            this.layout();
+            this.jumpToPageInstant(p);
+          } else {
+            this.layout();
+            this.applyBookTransform();
+          }
+        }, 160);
+      });
+    }
+
+    open(pageIndex) {
+      this.build();
+      this.isOpen = true;
+      this.overlay.classList.add('open');
+      document.body.classList.add('modal-open');
+      this.layout();
+      if (typeof pageIndex === 'number') {
+        this.jumpToPageInstant(pageIndex);
       } else {
-        window.addEventListener('resize', () => this.resize());
+        this.setStateInstant(0);
+        // Mở bìa ra sau một nhịp để khách thấy cuốn sách "mở"
+        clearTimeout(this.autoTimer);
+        this.autoTimer = setTimeout(() => {
+          if (this.isOpen && this.s === 0) this.setState(1, true);
+        }, prefersReducedMotion ? 100 : 750);
       }
-      if ('IntersectionObserver' in window) {
-        new IntersectionObserver((entries) => {
-          this.visible = entries[0].isIntersecting;
-        }, { threshold: 0.01 }).observe(this.wrap);
+      setTimeout(() => { const c = $('bk-close'); if (c) c.focus({ preventScroll: true }); }, 60);
+    }
+
+    close() {
+      if (!this.isOpen) return;
+      this.isOpen = false;
+      clearTimeout(this.autoTimer);
+      this.overlay.classList.remove('open');
+      if (!this.app.isAnyModalOpen()) document.body.classList.remove('modal-open');
+      this.app.onBookClosed();
+    }
+
+    // --- Dựng danh sách trang ---
+    buildPages() {
+      const app = this.app;
+      const s = app.settings;
+      const brand = s.brand_name || 'Tiệm bánh nhà làm';
+      const owner = s.owner_name || '';
+      const pages = [];
+
+      // 0: Bìa
+      pages.push(`<div class="pg pg-cover"><div class="cover-label">
+        <div class="cover-kicker">Thực đơn</div>
+        <div class="cover-brand">${esc(brand)}</div>
+        <div class="cover-sub">${esc(s.brand_subtitle || '')}</div>
+        ${owner ? `<div class="cover-owner">Chủ tiệm ${esc(owner)}</div>` : ''}
+        <button type="button" class="cover-open" data-flip="next">Mở thực đơn</button>
+      </div></div>`);
+
+      // 1: Mục lục (điền sau khi biết số trang)
+      pages.push('');
+
+      // Nhóm sản phẩm theo danh mục
+      const groups = [];
+      const known = {};
+      app.categories.forEach((c) => {
+        known[c.id] = true;
+        const items = app.products.filter((p) => p.category === c.id);
+        if (items.length) groups.push({ name: c.name, items: items });
+      });
+      const others = app.products.filter((p) => !known[p.category]);
+      if (others.length) groups.push({ name: 'Món khác', items: others });
+
+      this.toc = [];
+      groups.forEach((g) => {
+        this.toc.push({ name: g.name, page: pages.length, count: g.items.length });
+        g.items.forEach((p) => {
+          const n = pages.length;
+          pages.push(`<div class="pg">
+            <div class="pg-cat">${esc(g.name)}</div>
+            <div class="pg-photo"><span class="tape"></span><img src="${esc(p._img)}" alt="${esc(p.name)}">${isTruthy(p.is_featured) ? '<span class="tag">Bán chạy</span>' : ''}</div>
+            <div class="pg-name">${esc(p.name)}</div>
+            <p class="pg-desc">${esc(p.description || p.flavor || '')}</p>
+            <div class="pg-foot">
+              <span class="pg-price">${fmt(p.price)}</span>
+              <span class="pg-btns"><button type="button" class="pg-more" data-detail="${esc(p.id)}">Chi tiết</button><button type="button" class="pg-add" data-add="${esc(p.id)}">+ Thêm</button></span>
+            </div>
+            <span class="pg-num">${n}</span></div>`);
+        });
+      });
+
+      // Trang mục lục
+      pages[1] = `<div class="pg">
+        <div class="pg-title">Mục lục</div>
+        <p class="pg-lead">${owner ? `Bánh làm tại nhà bởi ${esc(owner)}. ` : ''}Chạm vào tên danh mục để lật nhanh tới trang.</p>
+        <ul class="toc-list">${this.toc.map((t) => `
+          <li><button type="button" class="toc-item" data-jump="${t.page}"><span class="toc-name">${esc(t.name)}</span><span class="toc-count">${t.count} món</span><span class="toc-page">tr. ${t.page}</span></button></li>`).join('')}
+        </ul><span class="pg-num">1</span></div>`;
+
+      // Nếu số trang cuối (gồm 2 trang đặt hàng) là lẻ ở chế độ 2 trang, thêm 1 trang cảm ơn
+      const tail = 2;
+      if (this.wantDouble && (pages.length + tail) % 2 === 1) {
+        const n = pages.length;
+        pages.push(`<div class="pg"><div class="pg-note"><div class="big">Cảm ơn bạn<br>đã ghé tiệm</div><p class="pg-lead" style="margin-top:.6em">Mỗi chiếc bánh đều được làm ra từ sự chăm chút.</p></div><span class="pg-num">${n}</span></div>`);
       }
+
+      // Trang liên hệ
+      const phone = String(s.store_phone || '').trim();
+      const tel = phone.replace(/[^\d+]/g, '');
+      let n = pages.length;
+      pages.push(`<div class="pg">
+        <div class="pg-title">Liên hệ</div>
+        <p class="pg-lead">Cần tư vấn bánh sinh nhật, bánh theo yêu cầu hay đơn số lượng lớn? Gọi hoặc nhắn Zalo cho tiệm nhé.</p>
+        <div class="pg-stack">
+          ${tel ? `<a class="pbtn" href="tel:${esc(tel)}">Gọi ${esc(phone)}</a>` : ''}
+          <a class="pbtn alt" href="${esc(app.zaloUrl())}" target="_blank" rel="noopener noreferrer">Nhắn Zalo</a>
+          ${s.store_address ? `<p class="pg-lead" style="margin:.4em 0 0">Địa chỉ: ${esc(s.store_address)}</p>` : ''}
+          ${s.store_open_hours ? `<p class="pg-lead" style="margin:0">Giờ nhận đơn: ${esc(s.store_open_hours)}</p>` : ''}
+        </div><span class="pg-num">${n}</span></div>`);
+
+      // Trang đặt hàng (cập nhật theo giỏ)
+      n = pages.length;
+      pages.push(`<div class="pg" id="bk-order-page">${this.orderPageInner(n)}</div>`);
+
+      return pages;
     }
 
-    markInteract() {
-      this.lastInteract = performance.now();
-      if (this.onFirstInteract) {
-        this.onFirstInteract();
-        this.onFirstInteract = null;
+    orderPageInner(n) {
+      const app = this.app;
+      const count = app.cartCount();
+      const total = app.cartSubtotal();
+      const apps = DELIVERY_APPS.filter((a) => isSafeUrl(app.settings[a.key]));
+      return `<div class="pg-title">Đặt bánh</div>
+        <div class="pg-sum" id="bk-order-sum">${count > 0
+          ? `Giỏ của bạn có <strong>${count}</strong> món · <strong>${fmt(total)}</strong>`
+          : 'Giỏ hàng đang trống. Lật lại các trang trước và bấm “+ Thêm” nhé.'}</div>
+        <div class="pg-stack">
+          <button type="button" class="pbtn" data-act="open-cart">${count > 0 ? 'Xem giỏ & gửi đơn' : 'Xem giỏ hàng'}</button>
+          ${apps.length ? `<p class="pg-lead" style="margin:.5em 0 0">Hoặc đặt qua app giao hàng:</p><div class="pg-grid2">${apps.map((a) => `<a class="pbtn dl ${a.cls}" href="${esc(app.settings[a.key])}" target="_blank" rel="noopener noreferrer">${a.label}</a>`).join('')}</div>` : ''}
+        </div><span class="pg-num">${n}</span>`;
+    }
+
+    refreshOrderPage() {
+      const el = document.getElementById('bk-order-page');
+      if (!el || !this.pages.length) return;
+      el.innerHTML = this.orderPageInner(this.pages.length - 1);
+    }
+
+    build() {
+      this.mode = this.wantDouble ? 'double' : 'single';
+      this.pages = this.buildPages();
+      const double = this.mode === 'double';
+      let html = '';
+      if (double) {
+        this.L = this.pages.length / 2;
+        this.maxS = this.L;
+        for (let k = 0; k < this.L; k++) {
+          html += `<div class="leaf" data-k="${k}" style="z-index:${this.L - k}"><div class="face front">${this.pages[2 * k]}</div><div class="face back">${this.pages[2 * k + 1]}</div></div>`;
+        }
+      } else {
+        this.L = this.pages.length;
+        this.maxS = this.L - 1;
+        for (let k = 0; k < this.L; k++) {
+          html += `<div class="leaf" data-k="${k}" style="z-index:${this.L - k}"><div class="face front">${this.pages[k]}</div><div class="face back"><div class="pg pg-blank"></div></div></div>`;
+        }
       }
+      this.book.className = 'book ' + this.mode;
+      this.book.innerHTML = html;
+      this.leaves = Array.prototype.slice.call(this.book.querySelectorAll('.leaf'));
+      this.s = 0;
     }
 
-    resize() {
-      const w = this.wrap.clientWidth;
-      const h = this.wrap.clientHeight;
-      if (!w || !h) return;
-      this.renderer.setSize(w, h, false);
-      this.camera.aspect = w / h;
-      this.camera.updateProjectionMatrix();
+    layout() {
+      const sw = this.stage.clientWidth;
+      const sh = this.stage.clientHeight;
+      if (!sw || !sh) return;
+      const r = CONFIG.BOOK_PAGE_RATIO;
+      const double = this.mode === 'double';
+      let ph = Math.min(sh - 18, 700);
+      let pw = ph * r;
+      if (double) {
+        if (pw * 2 > sw - 40) {
+          pw = (sw - 40) / 2;
+          ph = pw / r;
+        }
+      } else if (pw > sw - 28) {
+        pw = sw - 28;
+        ph = pw / r;
+      }
+      this.pw = pw;
+      this.ph = ph;
+      this.book.style.setProperty('--pw', pw + 'px');
+      this.book.style.setProperty('--ph', ph + 'px');
+      this.applyBookTransform();
     }
 
-    setProgress(p) {
-      this.progress = clamp(p, 0, 1);
-    }
-
-    setZoom(delta) {
-      this.zoom = clamp(this.zoom + delta, 0.6, 1.3);
-      this.markInteract();
-    }
-
-    // Camera: dolly + nâng góc nhìn theo tiến độ cuộn, parallax nhẹ theo chuột
-    frameCamera() {
-      const aspect = this.camera.aspect || 1;
-      const e = smooth(this.curP);
-      const baseDist = Math.max(5.4, 3.5 / (0.611 * aspect));
-      const d = baseDist * this.zoom * (0.7 + 0.3 * e);
-      const elev = 0.08 + 0.2 * e;
-      this.camTarget.y = 0.55 + (1 - e) * 0.15;
-      this.camera.position.set(
-        this.px * 0.35,
-        this.camTarget.y + Math.sin(elev) * d + this.py * 0.15,
-        Math.cos(elev) * d
-      );
-      this.camera.lookAt(this.camTarget);
-    }
-
-    // labels: danh sách nguyên liệu để tạo hotspot
-    setModel(type, labels) {
-      if (!this.ok) return;
-      this.pendingLabels = labels || [];
-      if (!this.trans && this.currentType === type) {
-        this.buildHotspots(this.pendingLabels); // cùng loại mô hình nhưng khác món (vd 2 loại croissant)
+    applyBookTransform() {
+      if (this.mode !== 'double') {
+        this.book.style.transform = '';
         return;
       }
-      this.pending = type;
-      if (!this.model) {
-        this.swap();
-        this.trans = { phase: 'in', t: 0 };
-      } else if (!this.trans || this.trans.phase === 'in') {
-        this.trans = { phase: 'out', t: 0, from: this.curScale };
-      }
+      let x = 0;
+      if (this.s === 0) x = -this.pw / 2;
+      else if (this.s >= this.maxS) x = this.pw / 2;
+      this.book.style.transform = `translateX(${x}px)`;
     }
 
-    swap() {
-      if (this.model) {
-        this.pivot.remove(this.model);
-        this.disposeObject(this.model);
-      }
-      this.model = BakeryMeshBuilder.build(this.pending);
-      this.currentType = this.pending;
-      this.curScale = 0.001;
-
-      // Hộp bao của mô hình (trước khi scale / xoay) để đặt hotspot
-      this.model.updateMatrixWorld(true);
-      this.bbox = new THREE.Box3().setFromObject(this.model);
-
-      this.model.scale.setScalar(this.curScale);
-      this.pivot.add(this.model);
-      this.buildHotspots(this.pendingLabels);
-      this.startBurst();
+    // Trang đang hiển thị (dùng khi đổi giữa chế độ 1 trang / 2 trang)
+    currentPage() {
+      if (this.mode === 'double') return this.s === 0 ? 0 : Math.min(this.pages.length - 1, this.s * 2 - 1);
+      return this.s;
     }
 
-    buildHotspots(labels) {
-      this.hsEls.forEach((el) => el.remove());
-      this.hsEls = [];
-      this.anchors = [];
-      if (!this.hotspotLayer || !this.bbox) return;
-      const size = new THREE.Vector3();
-      const center = new THREE.Vector3();
-      this.bbox.getSize(size);
-      this.bbox.getCenter(center);
-      const n = labels.length;
-      const heights = [0.78, 0.5, 0.88, 0.32];
-      labels.forEach((text, i) => {
-        const ang = 0.5 + i * (Math.PI * 2 / Math.max(n, 1));
-        const rx = size.x * 0.32;
-        const rz = size.z * 0.32;
-        this.anchors.push(new THREE.Vector3(
-          center.x + Math.cos(ang) * rx,
-          this.bbox.min.y + size.y * heights[i % heights.length],
-          center.z + Math.sin(ang) * rz
-        ));
-        const b = document.createElement('button');
-        b.type = 'button';
-        b.className = 'hs';
-        b.innerHTML = '<span class="hs-dot"></span><span class="hs-label"></span>';
-        b.querySelector('.hs-label').textContent = text;
-        b.addEventListener('click', () => b.classList.toggle('open'));
-        b.addEventListener('pointerenter', () => { this.lastInteract = performance.now(); });
-        this.hotspotLayer.appendChild(b);
-        this.hsEls.push(b);
+    pageToState(p) {
+      p = clamp(p, 0, this.pages.length - 1);
+      return this.mode === 'double' ? Math.ceil(p / 2) : p;
+    }
+
+    jumpToPage(p) {
+      this.setState(this.pageToState(p), true);
+    }
+
+    jumpToPageInstant(p) {
+      this.setStateInstant(this.pageToState(p));
+    }
+
+    setStateInstant(s) {
+      this.book.classList.add('no-anim');
+      this.setState(s, false);
+      void this.book.offsetWidth;
+      this.book.classList.remove('no-anim');
+    }
+
+    setState(s, animate) {
+      s = clamp(s, 0, this.maxS);
+      const prev = this.s;
+      this.s = s;
+      const fwd = s > prev;
+      const changed = [];
+      this.leaves.forEach((leaf, k) => {
+        if (leaf.classList.contains('flipped') !== (k < s)) changed.push(k);
       });
-    }
+      changed.sort((a, b) => (fwd ? a - b : b - a));
+      const step = changed.length > 6 ? 40 : 70;
+      const L = this.L;
 
-    updateHotspots() {
-      if (!this.hsEls.length || !this.model) return;
-      const show = !this.trans && this.curP > 0.55;
-      const w = this.wrap.clientWidth;
-      const h = this.wrap.clientHeight;
-      const center = new THREE.Vector3(0, 0.5, 0);
-      const toCam = this.camera.position.clone().sub(center).normalize();
-      const v = new THREE.Vector3();
-      this.model.updateMatrixWorld(true);
-      for (let i = 0; i < this.hsEls.length; i++) {
-        const el = this.hsEls[i];
-        v.copy(this.anchors[i]);
-        this.model.localToWorld(v);
-        const front = v.clone().sub(center).dot(toCam) > -0.15;
-        v.project(this.camera);
-        const x = (v.x * 0.5 + 0.5) * w;
-        const y = (-v.y * 0.5 + 0.5) * h;
-        el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
-        el.style.opacity = show && front ? '1' : '0';
-        el.style.pointerEvents = show && front ? 'auto' : 'none';
-        if (!front) el.classList.remove('open');
-      }
-    }
-
-    startBurst() {
-      if (!this.burstPts || prefersReducedMotion) return;
-      const pos = this.burstPts.geometry.attributes.position;
-      for (let i = 0; i < pos.count; i++) {
-        pos.setXYZ(i, 0, 0.5, 0);
-        const a = Math.random() * Math.PI * 2;
-        const u = Math.random() * 2 - 1;
-        const s = Math.sqrt(1 - u * u);
-        const sp = 0.8 + Math.random() * 1.6;
-        this.burstVel[i * 3] = Math.cos(a) * s * sp;
-        this.burstVel[i * 3 + 1] = (u * 0.8 + 0.6) * sp;
-        this.burstVel[i * 3 + 2] = Math.sin(a) * s * sp;
-      }
-      pos.needsUpdate = true;
-      this.burstLife = 0;
-      this.burstPts.visible = true;
-    }
-
-    disposeObject(obj) {
-      obj.traverse((o) => {
-        if (o.geometry) o.geometry.dispose();
-        if (o.material) {
-          if (Array.isArray(o.material)) o.material.forEach((m) => m.dispose());
-          else o.material.dispose();
+      this.leaves.forEach((leaf, k) => {
+        if (changed.indexOf(k) === -1) {
+          clearTimeout(leaf._zt);
+          leaf.style.zIndex = String(k < s ? k + 1 : L - k);
         }
       });
+
+      changed.forEach((k, idx) => {
+        const leaf = this.leaves[k];
+        const should = k < s;
+        const delay = animate ? idx * step : 0;
+        clearTimeout(leaf._zt);
+        leaf.style.transitionDelay = delay + 'ms';
+        leaf.style.zIndex = String(1000 + (fwd ? k : L - k));
+        leaf.classList.toggle('flipped', should);
+        leaf._zt = setTimeout(() => { leaf.style.zIndex = String(should ? k + 1 : L - k); }, animate ? delay + 1000 : 0);
+      });
+
+      this.applyBookTransform();
+      this.updateNav();
+      if (animate && changed.length) this.app.sound.playFlip();
     }
 
-    easeOutBack(x) {
-      const c1 = 1.70158;
-      const c3 = c1 + 1;
-      return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2);
+    updateNav() {
+      let label;
+      if (this.mode === 'double') {
+        if (this.s === 0) label = 'Bìa';
+        else if (this.s * 2 >= this.pages.length) label = 'Trang ' + (this.s * 2 - 1);
+        else label = 'Trang ' + (this.s * 2 - 1) + '–' + (this.s * 2);
+      } else {
+        label = this.s === 0 ? 'Bìa' : 'Trang ' + this.s + ' / ' + (this.pages.length - 1);
+      }
+      $('bk-pos').textContent = label;
+      $('bk-prev').disabled = this.s <= 0;
+      $('bk-next').disabled = this.s >= this.maxS;
     }
 
-    update(dt) {
-      // Làm mượt tiến độ cuộn và vị trí con trỏ
-      this.curP += (this.progress - this.curP) * Math.min(1, dt * 6);
-      this.px += (this.tpx - this.px) * Math.min(1, dt * 3);
-      this.py += (this.tpy - this.py) * Math.min(1, dt * 3);
-
-      // Chuyển món: thu nhỏ món cũ -> đổi -> phóng ra món mới
-      if (this.trans && this.model) {
-        const tr = this.trans;
-        tr.t += dt;
-        if (tr.phase === 'out') {
-          const dur = prefersReducedMotion ? 0.01 : 0.2;
-          const k = Math.min(tr.t / dur, 1);
-          this.curScale = Math.max(0.001, tr.from * (1 - k * k));
-          this.model.scale.setScalar(this.curScale);
-          if (k >= 1) {
-            this.swap();
-            this.trans = { phase: 'in', t: 0 };
-            if (!prefersReducedMotion) this.velY += 0.12;
-          }
-        } else {
-          const dur = prefersReducedMotion ? 0.01 : 0.6;
-          const k = Math.min(tr.t / dur, 1);
-          this.curScale = Math.max(0.001, this.easeOutBack(k) * CONFIG.MODEL_SCALE);
-          this.model.scale.setScalar(this.curScale);
-          if (k >= 1) {
-            this.curScale = CONFIG.MODEL_SCALE;
-            this.model.scale.setScalar(this.curScale);
-            this.trans = null;
-          }
-        }
-      }
-
-      // Xoay: quán tính sau khi thả, rồi tự xoay khi rảnh
-      if (!this.dragging) {
-        if (Math.abs(this.velY) > 0.0004) {
-          this.rotY += this.velY;
-          this.velY *= 0.93;
-        } else if (!prefersReducedMotion && performance.now() - this.lastInteract > CONFIG.AUTO_ROTATE_DELAY_MS) {
-          this.rotY += CONFIG.AUTO_ROTATE_SPEED * dt;
-        }
-        if (this.rotX > 0.14) this.rotX = Math.max(0.14, this.rotX - dt * 0.15);
-      }
-      const e = smooth(this.curP);
-      this.pivot.rotation.y = this.rotY + (1 - e) * Math.PI * 0.9;
-      this.pivot.rotation.x = this.rotX * 0.55;
-      const s = 1 + (1 - e) * 0.12;
-      this.pivot.scale.set(s, s, s);
-
-      // Hạt lấp lánh bay nhẹ
-      if (this.dust && !prefersReducedMotion) {
-        const p = this.dust.geometry.attributes.position;
-        for (let i = 0; i < p.count; i++) {
-          let y = p.getY(i) + dt * (0.05 + (i % 5) * 0.014);
-          if (y > 3.4) y = 0;
-          p.setY(i, y);
-        }
-        p.needsUpdate = true;
-        this.dust.position.x = this.px * 0.25;
-      }
-
-      // Hạt nổ
-      if (this.burstLife < 1) {
-        this.burstLife += dt;
-        const pos = this.burstPts.geometry.attributes.position;
-        for (let i = 0; i < pos.count; i++) {
-          pos.setXYZ(
-            i,
-            pos.getX(i) + this.burstVel[i * 3] * dt,
-            pos.getY(i) + this.burstVel[i * 3 + 1] * dt,
-            pos.getZ(i) + this.burstVel[i * 3 + 2] * dt
-          );
-          this.burstVel[i * 3] *= 0.96;
-          this.burstVel[i * 3 + 1] *= 0.96;
-          this.burstVel[i * 3 + 2] *= 0.96;
-        }
-        pos.needsUpdate = true;
-        this.burstPts.material.opacity = Math.max(0, 1 - this.burstLife);
-        if (this.burstLife >= 1) this.burstPts.visible = false;
-      }
-
-      this.frameCamera();
-    }
-
-    loop() {
-      requestAnimationFrame(() => this.loop());
-      const dt = Math.min(this.clock.getDelta(), 0.05);
-      if (!this.visible || document.hidden) return;
-      this.update(dt);
-      this.renderer.render(this.scene, this.camera);
-      this.updateHotspots();
+    // Phím tắt khi sách đang mở
+    onKey(e) {
+      if (e.key === 'ArrowRight') this.setState(this.s + 1, true);
+      else if (e.key === 'ArrowLeft') this.setState(this.s - 1, true);
+      else if (e.key === 'Escape') this.close();
     }
   }
 
@@ -1119,26 +807,29 @@
       this.products = [];
       this.categories = [];
       this.settings = {};
-      this.cart = this.loadCart();
-      this.selectedIndex = 0;
-      this.activeQuantity = 1;
+      this.view = [];
+      this.viewIndex = 0;
       this.activeCat = null;
+      this.cart = this.loadCart();
+      this.detailProduct = null;
+      this.detailQty = 1;
       this.apiConnected = false;
       this.lastFocus = null;
+      this.ambFlag = false;
+      this.ambToken = 0;
       this.sound = new SoundManager();
-      this.sound.enabled = false;
 
-      this.stage = new ShowcaseStage($('stage-canvas'), $('stage-wrap'), $('hotspots'));
-      if (!this.stage.ok) {
-        $('stage-wrap').classList.add('no-webgl');
-      } else {
-        this.stage.onFirstInteract = () => $('stage-hint').classList.add('gone');
-        setTimeout(() => $('stage-hint').classList.add('gone'), 12000);
-      }
+      this.cf = new Coverflow($('cf-stage'), {
+        onChange: (i) => this.showItem(i),
+        onOpen: (i) => this.view[i] && this.openDetail(this.view[i].id),
+        onInteract: () => $('swipe-hint').classList.add('gone')
+      });
+      this.book = new MenuBook(this);
 
       this.initUI();
       this.bindScroll();
       this.loadBackendData();
+      setTimeout(() => $('swipe-hint').classList.add('gone'), 9000);
     }
 
     isApiConfigured() {
@@ -1149,39 +840,18 @@
       return !!document.querySelector('.modal-overlay.open');
     }
 
-    // --- CUỘN TRANG: điều khiển cảnh điện ảnh ---
+    // Header trong suốt trên hero, đổi sang nền sáng khi cuộn qua hero
     bindScroll() {
       let ticking = false;
-      const run = () => { ticking = false; this.updateScrollState(); };
+      const run = () => {
+        ticking = false;
+        const rect = $('hero').getBoundingClientRect();
+        $('site-header').classList.toggle('scrolled', rect.bottom <= 70);
+      };
       window.addEventListener('scroll', () => {
         if (!ticking) { ticking = true; requestAnimationFrame(run); }
       }, { passive: true });
-      window.addEventListener('resize', run);
       run();
-    }
-
-    updateScrollState() {
-      const hero = $('hero');
-      const pin = $('hero-pin');
-      const rect = hero.getBoundingClientRect();
-      const total = hero.offsetHeight - pin.offsetHeight;
-      const p = total > 0 ? clamp(-rect.top / total, 0, 1) : 1;
-
-      pin.style.setProperty('--p', p.toFixed(3));
-      pin.style.setProperty('--intro', (1 - clamp(p / 0.28, 0, 1)).toFixed(3));
-      pin.style.setProperty('--panel', clamp((p - 0.2) / 0.3, 0, 1).toFixed(3));
-      pin.classList.toggle('picking', p > CONFIG.PICK_THRESHOLD);
-      if (this.stage.ok) this.stage.setProgress(p);
-
-      // Header: trong suốt trên hero tối, đổi sang nền sáng khi ra khỏi hero
-      $('site-header').classList.toggle('scrolled', rect.bottom <= 70);
-    }
-
-    scrollToPick() {
-      const hero = $('hero');
-      const pin = $('hero-pin');
-      const top = hero.getBoundingClientRect().top + window.scrollY + hero.offsetHeight - pin.offsetHeight;
-      window.scrollTo({ top: top, behavior: prefersReducedMotion ? 'auto' : 'smooth' });
     }
 
     // --- TẢI DỮ LIỆU TỪ GOOGLE APPS SCRIPT ---
@@ -1216,7 +886,7 @@
       }
 
       if (!loaded && CONFIG.USE_DEMO_FALLBACK) {
-        this.products = FALLBACK_PRODUCTS;
+        this.products = FALLBACK_PRODUCTS.map((p) => Object.assign({}, p));
         this.categories = FALLBACK_CATEGORIES;
         this.settings = FALLBACK_SETTINGS;
         this.showToast(this.isApiConfigured()
@@ -1224,23 +894,21 @@
           : 'Đang chạy chế độ Demo');
       }
 
-      // Sắp xếp theo sort_order
+      // Chuẩn hóa sản phẩm
+      this.products.forEach((p) => {
+        p.id = String(p.id);
+        p.price = Number(p.price) || 0;
+        p._imgs = getImages(p);
+        p._img = p._imgs[0] || PLACEHOLDER_IMG;
+      });
       this.products = this.products.slice().sort((a, b) => (Number(a.sort_order) || 999) - (Number(b.sort_order) || 999));
       this.categories = this.categories.slice().sort((a, b) => (Number(a.sort_order) || 999) - (Number(b.sort_order) || 999));
 
       this.reconcileCart();
       this.applySettings();
-      this.renderRail();
-      this.renderCatalogTabs();
-      this.renderCatalogProducts(null);
+      this.renderChips();
+      this.setCategory(null);
       this.updateCartUI();
-      if (this.products.length) {
-        // Mở màn hình bằng một món nổi bật
-        const featuredIdx = this.products.findIndex((p) => isTruthy(p.is_featured));
-        this.selectProduct(featuredIdx >= 0 ? featuredIdx : 0);
-      } else {
-        $('p-name').textContent = 'Thực đơn đang được cập nhật';
-      }
     }
 
     // Đồng bộ giá / món trong giỏ cũ với dữ liệu mới nhất
@@ -1252,36 +920,63 @@
       this.saveCart();
     }
 
+    zaloUrl() {
+      const s = this.settings;
+      if (isSafeUrl(s.zalo_url)) return s.zalo_url;
+      const tel = String(s.store_phone || '').replace(/[^\d]/g, '');
+      return tel ? 'https://zalo.me/' + tel : 'https://zalo.me';
+    }
+
     // Đổ thông tin thương hiệu, liên hệ và link app giao hàng
     applySettings() {
       const s = this.settings;
-      const brand = s.brand_name || 'PETIT FOUR';
-      const sub = s.brand_subtitle || 'Artisan Bakery';
+      const brand = s.brand_name || 'Tiệm bánh nhà làm';
+      const sub = s.brand_subtitle || '';
       document.querySelectorAll('[data-brand]').forEach((el) => { el.textContent = brand; });
       document.querySelectorAll('[data-brand-sub]').forEach((el) => { el.textContent = sub; });
-      document.title = `${brand} — ${sub}`;
+      document.title = sub ? `${brand} — ${sub}` : brand;
 
-      // Liên hệ
+      // Chủ tiệm & liên hệ
+      const owner = s.owner_name || '';
+      $('ct-owner').textContent = owner || brand;
+      const initials = (owner || brand).split(/\s+/).filter(Boolean).slice(-2).map((w) => w.charAt(0).toUpperCase()).join('');
+      $('ct-avatar').textContent = initials || 'TT';
+
       const phone = String(s.store_phone || '').trim();
       const tel = phone.replace(/[^\d+]/g, '');
       const phoneLink = tel ? `tel:${tel}` : '#contact';
-      ['ct-phone', 'ct-phone-text', 'bar-call'].forEach((id) => {
+      ['ct-phone', 'ct-phone-text', 'ct-call', 'fab-call', 'success-call'].forEach((id) => {
         const el = $(id);
         if (el) el.setAttribute('href', phoneLink);
       });
-      $('ct-phone-text').textContent = phone || 'Chưa cập nhật';
-      if (!tel) $('ct-phone').classList.add('hidden');
-
-      $('ct-address').textContent = s.store_address || 'Đang cập nhật';
-      $('ct-hours').textContent = s.store_open_hours || 'Đang cập nhật';
-      const mapLink = $('ct-map');
-      if (s.store_address) {
-        mapLink.href = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(s.store_address);
-      } else {
-        mapLink.style.display = 'none';
+      $('ct-phone-text').textContent = phone || 'Đang cập nhật';
+      if (!tel) {
+        $('ct-phone').classList.add('hidden');
+        $('ct-call').style.display = 'none';
+        $('fab-call').style.display = 'none';
+        $('success-call').style.display = 'none';
       }
 
-      [['ct-zalo', 'zalo_url'], ['ct-facebook', 'facebook_url'], ['ct-instagram', 'instagram_url']].forEach((pair) => {
+      const zalo = this.zaloUrl();
+      ['ct-zalo', 'ct-zalo-btn', 'fab-zalo'].forEach((id) => { const el = $(id); if (el) el.setAttribute('href', zalo); });
+
+      const addrRow = $('row-address');
+      if (s.store_address) {
+        $('ct-address').textContent = s.store_address;
+        $('ct-map').href = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(s.store_address);
+        addrRow.hidden = false;
+      } else {
+        addrRow.hidden = true;
+      }
+      const hoursRow = $('row-hours');
+      if (s.store_open_hours) {
+        $('ct-hours').textContent = s.store_open_hours;
+        hoursRow.hidden = false;
+      } else {
+        hoursRow.hidden = true;
+      }
+
+      [['ct-facebook', 'facebook_url'], ['ct-instagram', 'instagram_url']].forEach((pair) => {
         const el = $(pair[0]);
         const url = s[pair[1]];
         if (isSafeUrl(url)) {
@@ -1311,185 +1006,211 @@
       });
 
       // Hàng chip app trong giỏ hàng
-      const row = $('checkout-delivery');
-      row.innerHTML = DELIVERY_APPS.map((app) => {
+      $('checkout-delivery').innerHTML = DELIVERY_APPS.map((app) => {
         const url = s[app.key];
         return isSafeUrl(url)
           ? `<a class="alt-chip ${app.cls}" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${app.label}</a>`
           : `<span class="alt-chip disabled">${app.label} (sắp có)</span>`;
       }).join('');
 
-      // Cập nhật nhãn giao hàng theo phí cấu hình
+      // Nhãn giao hàng theo phí cấu hình
       const fee = Number(s.shipping_fee_default) || 25000;
       const opt = $('cust-delivery-method').querySelector('option[value="delivery"]');
       if (opt) opt.textContent = `Giao tận nơi (+${fee.toLocaleString('vi-VN')} đ)`;
     }
 
-    // --- CHỌN MÓN TRÊN SÂN KHẤU 3D ---
-    selectProduct(index) {
-      if (!this.products.length) return;
-      const n = this.products.length;
-      this.selectedIndex = ((index % n) + n) % n;
-      const p = this.products[this.selectedIndex];
-      this.activeQuantity = 1;
+    // --- HERO: lọc danh mục + dải ảnh ---
+    renderChips() {
+      const cats = this.categories.filter((c) => this.products.some((p) => p.category === c.id));
+      const chips = [{ id: null, name: 'Tất cả' }].concat(cats);
+      const box = $('cat-chips');
+      box.innerHTML = chips.map((c) =>
+        `<button type="button" class="chip${c.id === this.activeCat ? ' active' : ''}" role="tab" data-cat="${c.id === null ? '' : esc(c.id)}">${esc(c.name)}</button>`
+      ).join('');
+      box.querySelectorAll('.chip').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          this.setCategory(btn.dataset.cat || null);
+          box.querySelectorAll('.chip').forEach((b) => b.classList.toggle('active', b === btn));
+        });
+      });
+    }
 
+    setCategory(catId) {
+      this.activeCat = catId;
+      this.view = catId ? this.products.filter((p) => p.category === catId) : this.products.slice();
+      this.cf.setItems(this.view.map((p) => ({
+        id: p.id, name: p.name, img: p._img, featured: isTruthy(p.is_featured)
+      })), 0);
+      if (!this.view.length) {
+        $('hi-name').textContent = 'Thực đơn đang được cập nhật';
+        $('hi-flavor').textContent = '';
+        $('hi-price').textContent = '';
+      }
+    }
+
+    showItem(i) {
+      const p = this.view[i];
+      if (!p) return;
+      this.viewIndex = i;
       const catObj = this.categories.find((c) => c.id === p.category);
-      $('p-category').textContent = catObj ? catObj.name : 'Artisan';
-      $('p-name').textContent = p.name;
-      $('p-price').textContent = fmt(p.price);
-      $('p-desc').textContent = p.description || 'Hương vị hảo hạng được chăm chút bởi thợ bánh của tiệm.';
-      $('p-flavor').textContent = p.flavor || 'Thơm béo, ngọt dịu thanh tao';
-      $('p-ingredients').textContent = p.ingredients || 'Nguyên liệu nhập khẩu chất lượng cao';
-      $('p-weight').textContent = p.weight || 'Tiêu chuẩn';
-      $('p-counter').textContent = `${this.selectedIndex + 1} / ${n}`;
+      $('hi-cat').textContent = catObj ? catObj.name : 'Bánh';
+      $('hi-counter').textContent = `${i + 1} / ${this.view.length}`;
+      $('hi-name').textContent = p.name;
+      $('hi-flavor').textContent = p.flavor || p.description || '';
+      $('hi-price').textContent = fmt(p.price);
 
       const stock = Number(p.stock);
-      const stockEl = $('p-stock');
+      const stockEl = $('hi-stock');
       if (stock > 0 && stock <= CONFIG.LOW_STOCK_LIMIT) {
         stockEl.textContent = `Chỉ còn ${stock} chiếc`;
         stockEl.hidden = false;
       } else {
         stockEl.hidden = true;
       }
-      this.updateDetailQty();
 
-      // Ảnh thật (polaroid) + ảnh dự phòng khi máy không hỗ trợ WebGL
-      const pol = $('polaroid');
-      const polImg = $('polaroid-img');
-      delete polImg.dataset.fallbackApplied;
-      polImg.src = p.image_url || PLACEHOLDER_IMG;
-      pol.classList.remove('swap');
-      void pol.offsetWidth;
-      pol.classList.add('swap');
-      const fb = $('stage-fallback-img');
-      delete fb.dataset.fallbackApplied;
-      fb.src = p.image_url || PLACEHOLDER_IMG;
-      fb.alt = p.name;
+      const info = $('hero-info');
+      info.classList.remove('swap');
+      void info.offsetWidth;
+      info.classList.add('swap');
 
-      const type = resolveModelType(p);
-      $('hero-pin').style.setProperty('--glow', MODEL_GLOWS[type] || '#E8457C');
-      if (this.stage.ok) this.stage.setModel(type, parseIngredients(p));
-
-      // Đánh dấu thumbnail đang chọn
-      const thumbs = document.querySelectorAll('.thumb');
-      thumbs.forEach((t, i) => {
-        const active = i === this.selectedIndex;
-        t.classList.toggle('active', active);
-        t.setAttribute('aria-selected', active ? 'true' : 'false');
-      });
-      const activeThumb = thumbs[this.selectedIndex];
-      const rail = $('rail');
-      if (activeThumb && rail) {
-        const left = activeThumb.offsetLeft - (rail.clientWidth - activeThumb.clientWidth) / 2;
-        rail.scrollTo({ left: Math.max(0, left), behavior: prefersReducedMotion ? 'auto' : 'smooth' });
-      }
+      this.setAmbient(p._img);
     }
 
-    renderRail() {
-      const rail = $('rail');
-      rail.innerHTML = this.products.map((p, i) => `
-        <button class="thumb" role="option" aria-selected="false" data-index="${i}" title="${esc(p.name)}">
-          <img src="${esc(p.image_url || PLACEHOLDER_IMG)}" alt="" loading="lazy" width="70" height="70">
-          <span>${esc(p.name)}</span>
-        </button>
-      `).join('');
+    // Nền hero mờ ảo lấy từ chính ảnh món đang chọn
+    setAmbient(url) {
+      const token = ++this.ambToken;
+      const apply = (u) => {
+        if (token !== this.ambToken) return;
+        const next = $(this.ambFlag ? 'amb-a' : 'amb-b');
+        const prev = $(this.ambFlag ? 'amb-b' : 'amb-a');
+        next.style.backgroundImage = cssUrl(u);
+        next.classList.add('on');
+        prev.classList.remove('on');
+        this.ambFlag = !this.ambFlag;
+      };
+      const img = new Image();
+      img.onload = () => apply(url);
+      img.onerror = () => apply(PLACEHOLDER_IMG);
+      img.src = url;
+    }
+
+    // --- CHI TIẾT MÓN ---
+    findProduct(id) {
+      return this.products.find((p) => String(p.id) === String(id));
+    }
+
+    openDetail(id) {
+      const p = this.findProduct(id);
+      if (!p) return;
+      this.detailProduct = p;
+      this.detailQty = 1;
+      const img = $('dt-img');
+      delete img.dataset.fallbackApplied;
+      img.src = p._img;
+      img.alt = p.name;
+      const thumbs = $('dt-thumbs');
+      if (p._imgs.length > 1) {
+        thumbs.innerHTML = p._imgs.map((u, i) => `<button type="button" class="${i === 0 ? 'active' : ''}" data-src="${esc(u)}" aria-label="Ảnh ${i + 1}"><img src="${esc(u)}" alt=""></button>`).join('');
+      } else {
+        thumbs.innerHTML = '';
+      }
+      const catObj = this.categories.find((c) => c.id === p.category);
+      $('dt-cat').textContent = catObj ? catObj.name : 'Bánh';
+      $('dt-name').textContent = p.name;
+      $('dt-price').textContent = fmt(p.price);
+      $('dt-desc').textContent = p.description || 'Bánh làm tại nhà, nướng theo đơn.';
+      $('dt-flavor').textContent = p.flavor || '—';
+      $('dt-ingredients').textContent = p.ingredients || '—';
+      $('dt-weight').textContent = p.weight || '—';
+      this.updateDetailQty();
+      this.openModal('modal-detail');
     }
 
     updateDetailQty() {
-      const p = this.products[this.selectedIndex];
-      $('qty-count').textContent = this.activeQuantity;
-      const total = (Number(p ? p.price : 0) || 0) * this.activeQuantity;
-      $('detail-btn-price').textContent = fmt(total);
+      $('dt-qty-count').textContent = this.detailQty;
+      const p = this.detailProduct;
+      $('dt-add-price').textContent = fmt((p ? p.price : 0) * this.detailQty);
     }
 
     // --- UI CONTROLS ---
     initUI() {
-      // Điều hướng 3D
-      $('btn-prev').addEventListener('click', () => this.selectProduct(this.selectedIndex - 1));
-      $('btn-next').addEventListener('click', () => this.selectProduct(this.selectedIndex + 1));
-      $('btn-zoom-in').addEventListener('click', () => this.stage.ok && this.stage.setZoom(-0.12));
-      $('btn-zoom-out').addEventListener('click', () => this.stage.ok && this.stage.setZoom(0.12));
-      $('btn-start').addEventListener('click', () => this.scrollToPick());
-      $('rail').addEventListener('click', (e) => {
-        const btn = e.target.closest('.thumb');
-        if (!btn) return;
-        this.selectProduct(Number(btn.dataset.index));
-        // Đang ở phần giới thiệu -> chuyển luôn sang phần chọn bánh
-        if (!$('hero-pin').classList.contains('picking')) this.scrollToPick();
+      // Điều hướng dải ảnh
+      $('cf-prev').addEventListener('click', () => this.cf.prev());
+      $('cf-next').addEventListener('click', () => this.cf.next());
+
+      // Nút thêm vào giỏ / chi tiết ở hero
+      $('hi-add').addEventListener('click', () => {
+        const p = this.view[this.viewIndex];
+        if (!p) return;
+        const card = document.querySelector('.cf-card.is-center .cf-inner');
+        this.addToCart(p, 1);
+        this.flyToCart(card || $('hi-add'), p._img);
+        this.sound.playChime();
+        this.showToast(`Đã thêm 1 × ${p.name} vào giỏ`);
+      });
+      $('hi-detail').addEventListener('click', () => {
+        const p = this.view[this.viewIndex];
+        if (p) this.openDetail(p.id);
       });
 
-      // Liên kết "Xem bánh 3D" cuộn tới phần chọn bánh
-      document.querySelectorAll('[data-go="pick"]').forEach((a) => {
-        a.addEventListener('click', (e) => {
-          e.preventDefault();
-          this.scrollToPick();
-        });
+      // Mở thực đơn dạng sách
+      document.querySelectorAll('[data-open-book], #btn-open-book').forEach((el) => {
+        el.addEventListener('click', (e) => { e.preventDefault(); this.openBook(); });
       });
 
-      // Bàn phím: mũi tên đổi món khi không đang nhập liệu / mở hộp thoại
+      // Giỏ hàng
+      $('btn-open-cart').addEventListener('click', () => this.openCheckoutModal());
+      $('cart-pill').addEventListener('click', () => this.openCheckoutModal());
+
+      // Âm thanh
+      $('btn-toggle-sound').addEventListener('click', () => {
+        const on = this.sound.toggle();
+        $('btn-toggle-sound').setAttribute('aria-pressed', on ? 'true' : 'false');
+        if (on) this.sound.playBell();
+        this.showToast(on ? 'Đã bật âm thanh' : 'Đã tắt âm thanh');
+      });
+
+      // Bàn phím
       window.addEventListener('keydown', (e) => {
         if (this.isAnyModalOpen()) {
           if (e.key === 'Escape') this.closeTopModal();
           return;
         }
+        if (this.book.isOpen) {
+          this.book.onKey(e);
+          return;
+        }
         const tag = (e.target && e.target.tagName) || '';
-        if (/INPUT|SELECT|TEXTAREA/.test(tag) || e.shiftKey) return;
-        if (e.key === 'ArrowLeft') this.selectProduct(this.selectedIndex - 1);
-        if (e.key === 'ArrowRight') this.selectProduct(this.selectedIndex + 1);
+        if (/INPUT|SELECT|TEXTAREA/.test(tag)) return;
+        if (window.scrollY > $('hero').offsetHeight * 0.6) return;
+        if (e.key === 'ArrowLeft') this.cf.prev();
+        if (e.key === 'ArrowRight') this.cf.next();
       });
 
-      // Số lượng + thêm giỏ
-      $('qty-minus').addEventListener('click', () => {
-        if (this.activeQuantity > 1) {
-          this.activeQuantity--;
-          this.updateDetailQty();
-        }
+      // Modal chi tiết
+      $('dt-qty-minus').addEventListener('click', () => {
+        if (this.detailQty > 1) { this.detailQty--; this.updateDetailQty(); }
       });
-      $('qty-plus').addEventListener('click', () => {
-        if (this.activeQuantity < 99) {
-          this.activeQuantity++;
-          this.updateDetailQty();
-        }
+      $('dt-qty-plus').addEventListener('click', () => {
+        if (this.detailQty < 99) { this.detailQty++; this.updateDetailQty(); }
       });
-      $('btn-add-to-cart').addEventListener('click', () => {
-        const p = this.products[this.selectedIndex];
+      $('dt-thumbs').addEventListener('click', (e) => {
+        const b = e.target.closest('button[data-src]');
+        if (!b) return;
+        const img = $('dt-img');
+        delete img.dataset.fallbackApplied;
+        img.src = b.dataset.src;
+        $('dt-thumbs').querySelectorAll('button').forEach((x) => x.classList.toggle('active', x === b));
+      });
+      $('dt-add').addEventListener('click', () => {
+        const p = this.detailProduct;
         if (!p) return;
-        const qty = this.activeQuantity;
+        const qty = this.detailQty;
         this.addToCart(p, qty);
-        this.flyToCart($('btn-add-to-cart'), p.image_url);
+        this.flyToCart($('dt-img'), p._img);
         this.sound.playChime();
         this.showToast(`Đã thêm ${qty} × ${p.name} vào giỏ`);
-        this.activeQuantity = 1;
-        this.updateDetailQty();
-      });
-
-      // Header
-      $('btn-open-cart').addEventListener('click', () => this.openCheckoutModal());
-      $('bar-cart').addEventListener('click', () => this.openCheckoutModal());
-      $('btn-toggle-sound').addEventListener('click', () => {
-        const on = this.sound.toggle();
-        $('btn-toggle-sound').setAttribute('aria-pressed', on ? 'true' : 'false');
-        if (on) this.sound.playDoorBell();
-        this.showToast(on ? 'Đã bật âm thanh' : 'Đã tắt âm thanh');
-      });
-
-      // Menu: xem 3D / thêm giỏ (ủy quyền sự kiện)
-      $('catalog-products-grid').addEventListener('click', (e) => {
-        const btn = e.target.closest('[data-act]');
-        if (!btn) return;
-        const idx = this.products.findIndex((p) => String(p.id) === String(btn.dataset.id));
-        if (idx < 0) return;
-        if (btn.dataset.act === 'view') {
-          this.selectProduct(idx);
-          this.scrollToPick();
-        } else if (btn.dataset.act === 'add') {
-          const p = this.products[idx];
-          this.addToCart(p, 1);
-          const card = btn.closest('.m-card');
-          this.flyToCart(card ? card.querySelector('.m-img img') : btn, p.image_url);
-          this.sound.playChime();
-          this.showToast(`Đã thêm 1 × ${p.name} vào giỏ`);
-        }
+        this.closeModal('modal-detail');
       });
 
       // Đóng modal
@@ -1502,7 +1223,7 @@
         });
       });
 
-      // Giỏ hàng: tăng giảm / xóa (ủy quyền sự kiện)
+      // Giỏ hàng: tăng giảm / xóa
       $('cart-items-container').addEventListener('click', (e) => {
         const btn = e.target.closest('[data-op]');
         if (!btn) return;
@@ -1520,17 +1241,17 @@
 
       // Phương thức nhận bánh
       const delivMethod = $('cust-delivery-method');
-      const addressGrp = $('address-group');
       delivMethod.addEventListener('change', () => {
-        addressGrp.style.display = (delivMethod.value === 'delivery') ? 'block' : 'none';
+        $('address-group').style.display = (delivMethod.value === 'delivery') ? 'block' : 'none';
         this.renderCheckoutSummary();
       });
 
-      // Gửi đơn
+      // Gửi đơn / nhắn đơn qua Zalo
       $('checkout-form').addEventListener('submit', (e) => {
         e.preventDefault();
         this.submitOrder();
       });
+      $('btn-zalo-order').addEventListener('click', () => this.zaloOrder());
 
       $('btn-back-to-bakery').addEventListener('click', () => this.closeModal('modal-success'));
 
@@ -1543,11 +1264,28 @@
       });
     }
 
-    // Hiệu ứng ảnh bánh bay vào giỏ hàng
-    flyToCart(fromEl, imgUrl) {
-      const target = $('btn-open-cart');
+    openBook(pageIndex) {
+      this.book.open(pageIndex);
+    }
+
+    onBookClosed() {
+      this.updateCartUI();
+    }
+
+    // Thêm theo mã món (dùng cho các nút trong sách)
+    addById(id, qty, fromEl, inBook) {
+      const p = this.findProduct(id);
+      if (!p) return;
+      this.addToCart(p, qty);
+      this.sound.playChime();
+      this.showToast(`Đã thêm ${qty} × ${p.name} vào giỏ`);
+      this.flyToCart(fromEl, p._img, inBook ? 'bk-cart' : 'btn-open-cart');
+    }
+
+    // Ảnh bánh bay vào giỏ hàng
+    flyToCart(fromEl, imgUrl, targetId) {
       const pop = () => {
-        ['cart-counter', 'bar-cart-counter'].forEach((id) => {
+        ['cart-counter', 'bk-cart-counter'].forEach((id) => {
           const b = $(id);
           if (!b) return;
           b.classList.remove('pop');
@@ -1555,6 +1293,7 @@
           b.classList.add('pop');
         });
       };
+      const target = $(targetId || (this.book.isOpen ? 'bk-cart' : 'btn-open-cart'));
       if (!fromEl || !target || prefersReducedMotion || !fromEl.getBoundingClientRect || !target.animate) {
         pop();
         return;
@@ -1599,55 +1338,6 @@
       document.body.removeChild(ta);
     }
 
-    // --- MENU ---
-    renderCatalogTabs() {
-      const container = $('catalog-category-tabs');
-      if (!container) return;
-      const tabs = [{ id: null, name: 'Tất cả' }].concat(this.categories);
-      container.innerHTML = tabs.map((c) =>
-        `<button class="tab${c.id === this.activeCat ? ' active' : ''}" role="tab" data-cat="${c.id === null ? '' : esc(c.id)}">${esc(c.name)}</button>`
-      ).join('');
-      container.querySelectorAll('.tab').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          container.querySelectorAll('.tab').forEach((b) => b.classList.remove('active'));
-          btn.classList.add('active');
-          this.activeCat = btn.dataset.cat || null;
-          this.renderCatalogProducts(this.activeCat);
-        });
-      });
-    }
-
-    renderCatalogProducts(catId) {
-      const grid = $('catalog-products-grid');
-      if (!grid) return;
-      const list = catId ? this.products.filter((p) => p.category === catId) : this.products;
-      if (!list.length) {
-        grid.innerHTML = '<p class="empty">Danh mục này chưa có món. Hãy chọn danh mục khác nhé.</p>';
-        return;
-      }
-      grid.innerHTML = list.map((p) => {
-        const featured = isTruthy(p.is_featured);
-        return `
-        <article class="m-card">
-          <button class="m-img" data-act="view" data-id="${esc(p.id)}" aria-label="Xem ${esc(p.name)} dạng 3D">
-            <img src="${esc(p.image_url || PLACEHOLDER_IMG)}" alt="${esc(p.name)}" loading="lazy">
-            ${featured ? '<span class="m-badge">Bán chạy</span>' : ''}
-          </button>
-          <div class="m-body">
-            <div class="m-name">${esc(p.name)}</div>
-            <div class="m-flavor">${esc(p.flavor || p.description || '')}</div>
-            <div class="m-foot">
-              <span class="m-price">${fmt(p.price)}</span>
-              <span class="m-actions">
-                <button class="m-view" data-act="view" data-id="${esc(p.id)}">Xem 3D</button>
-                <button class="m-add" data-act="add" data-id="${esc(p.id)}" aria-label="Thêm ${esc(p.name)} vào giỏ">+</button>
-              </span>
-            </div>
-          </div>
-        </article>`;
-      }).join('');
-    }
-
     // --- GIỎ HÀNG & CHECKOUT ---
     openCheckoutModal() {
       this.renderCartItems();
@@ -1659,12 +1349,12 @@
       const container = $('cart-items-container');
       if (!container) return;
       if (this.cart.length === 0) {
-        container.innerHTML = '<p class="cart-empty">Giỏ hàng đang trống. Chọn một chiếc bánh ở màn hình 3D rồi bấm “Thêm vào giỏ” nhé.</p>';
+        container.innerHTML = '<p class="cart-empty">Giỏ hàng đang trống. Vuốt xem bánh rồi bấm “Thêm vào giỏ” nhé.</p>';
         return;
       }
       container.innerHTML = this.cart.map((item, idx) => `
         <div class="cart-item">
-          <img src="${esc(item.product.image_url || PLACEHOLDER_IMG)}" alt="">
+          <img src="${esc(item.product._img || PLACEHOLDER_IMG)}" alt="">
           <div class="ci-info">
             <div class="ci-name">${esc(item.product.name)}</div>
             <div class="ci-price">${fmt(item.product.price)} × ${item.quantity}</div>
@@ -1679,8 +1369,16 @@
       `).join('');
     }
 
+    cartCount() {
+      return this.cart.reduce((acc, i) => acc + i.quantity, 0);
+    }
+
+    cartSubtotal() {
+      return this.cart.reduce((acc, i) => acc + (Number(i.product.price) || 0) * i.quantity, 0);
+    }
+
     calcTotals() {
-      const subtotal = this.cart.reduce((acc, i) => acc + (Number(i.product.price) || 0) * i.quantity, 0);
+      const subtotal = this.cartSubtotal();
       const isDelivery = $('cust-delivery-method').value === 'delivery';
       const shipping = isDelivery && subtotal > 0 ? (Number(this.settings.shipping_fee_default) || 25000) : 0;
       return { subtotal: subtotal, shipping: shipping, total: subtotal + shipping };
@@ -1691,6 +1389,41 @@
       $('summary-subtotal').textContent = fmt(t.subtotal);
       $('summary-shipping').textContent = fmt(t.shipping);
       $('summary-total').textContent = fmt(t.total);
+    }
+
+    // Soạn nội dung đơn dạng chữ để nhắn Zalo
+    buildOrderText() {
+      const t = this.calcTotals();
+      const name = $('cust-name').value.trim();
+      const phone = $('cust-phone').value.trim();
+      const method = $('cust-delivery-method').value;
+      const address = $('cust-address').value.trim();
+      const note = $('cust-note').value.trim();
+      const lines = [];
+      lines.push(`ĐƠN ĐẶT BÁNH — ${this.settings.brand_name || 'Tiệm bánh nhà làm'}`);
+      if (name) lines.push(`Tên: ${name}`);
+      if (phone) lines.push(`SĐT: ${phone}`);
+      lines.push(`Nhận bánh: ${method === 'delivery' ? 'Giao tận nơi' : 'Đến lấy tại tiệm'}`);
+      if (method === 'delivery' && address) lines.push(`Địa chỉ: ${address}`);
+      lines.push('Món đã chọn:');
+      this.cart.forEach((i) => {
+        lines.push(`- ${i.quantity} × ${i.product.name}: ${fmt((Number(i.product.price) || 0) * i.quantity)}`);
+      });
+      if (t.shipping > 0) lines.push(`Phí giao: ${fmt(t.shipping)}`);
+      lines.push(`TỔNG: ${fmt(t.total)}`);
+      if (note) lines.push(`Ghi chú: ${note}`);
+      return lines.join('\n');
+    }
+
+    // Đặt qua Zalo: sao chép đơn rồi mở khung chat Zalo của tiệm để dán gửi
+    zaloOrder() {
+      if (this.cart.length === 0) {
+        this.showToast('Giỏ hàng trống. Hãy chọn ít nhất một chiếc bánh.');
+        return;
+      }
+      const text = this.buildOrderText();
+      window.open(this.zaloUrl(), '_blank', 'noopener');
+      this.copyText(text).then(() => this.showToast('Đã sao chép đơn. Dán vào Zalo rồi gửi cho tiệm nhé!'));
     }
 
     // Gửi đơn hàng lên Apps Script
@@ -1743,7 +1476,7 @@
       try {
         let orderResult = null;
 
-        if (this.isApiConfigured()) {
+        if (this.isApiConfigured() && this.apiConnected) {
           // Gửi POST tới Apps Script Web App (text/plain để tránh preflight CORS)
           const resp = await this.fetchWithTimeout(CONFIG.API_BASE_URL, {
             method: 'POST',
@@ -1752,13 +1485,17 @@
           });
           if (!resp.ok) throw new Error('HTTP ' + resp.status);
           orderResult = await resp.json();
+        } else if (this.isApiConfigured()) {
+          // Đã cấu hình API nhưng đang xem thực đơn mẫu: không nhận đơn giả
+          this.showToast('Chưa kết nối được hệ thống nhận đơn. Vui lòng thử lại hoặc nhắn Zalo cho tiệm.');
+          return;
         } else {
           // Chế độ demo: chỉ khi CHƯA cấu hình API thật
           const t = this.calcTotals();
           orderResult = {
             success: true,
             order: {
-              order_id: 'PF-DEMO-' + Math.floor(1000 + Math.random() * 9000),
+              order_id: 'DEMO-' + Math.floor(1000 + Math.random() * 9000),
               total: t.total,
               payment_method: payment
             }
@@ -1767,6 +1504,7 @@
 
         if (orderResult && orderResult.success) {
           this.closeModal('modal-checkout');
+          if (this.book.isOpen) this.book.close();
           this.clearCart();
           $('checkout-form').reset();
           $('address-group').style.display = 'none';
@@ -1785,43 +1523,54 @@
 
     showOrderSuccess(order) {
       const s = this.settings;
+      const total = fmt(order.total);
       $('success-order-id').textContent = order.order_id;
-      $('success-total-val').textContent = fmt(order.total);
+      $('success-total-val').textContent = total;
       $('success-transfer-memo').textContent = order.order_id;
-      $('cod-total').textContent = fmt(order.total);
+      $('nobank-total').textContent = total;
+      $('cod-total').textContent = total;
 
       const isCod = order.payment_method === 'cod';
-      $('transfer-instruction-box').style.display = isCod ? 'none' : 'block';
+      const acc = String(s.bank_account_number || '').trim();
+      const hasBank = !!acc;
+
       $('cod-note').style.display = isCod ? 'block' : 'none';
+      $('transfer-instruction-box').style.display = (!isCod && hasBank) ? 'block' : 'none';
+      $('no-bank-note').style.display = (!isCod && !hasBank) ? 'block' : 'none';
 
-      const acc = s.bank_account_number || '0011004567890';
-      const holder = s.bank_account_holder || 'PETIT FOUR';
-      $('success-bank-name').textContent = s.bank_name || 'Vietcombank';
-      $('success-bank-acc').textContent = acc;
-      $('success-bank-holder').textContent = holder;
+      if (!isCod && hasBank) {
+        const holder = s.bank_account_holder || '';
+        $('success-bank-name').textContent = s.bank_name || '—';
+        $('success-bank-acc').textContent = acc;
+        $('success-bank-holder').textContent = holder || '—';
 
-      // Có bank_code -> tạo VietQR đúng số tiền và nội dung; nếu không dùng ảnh QR tĩnh
-      const qrImg = $('success-qr-img');
-      qrImg.style.display = '';
-      delete qrImg.dataset.fallbackApplied;
-      if (s.bank_code) {
-        qrImg.src = `https://img.vietqr.io/image/${encodeURIComponent(s.bank_code)}-${encodeURIComponent(acc)}-compact2.png`
-          + `?amount=${encodeURIComponent(Math.round(Number(order.total) || 0))}`
-          + `&addInfo=${encodeURIComponent(order.order_id)}`
-          + `&accountName=${encodeURIComponent(holder)}`;
-        qrImg.onerror = () => {
-          if (s.bank_qr_url && qrImg.src !== s.bank_qr_url) {
-            qrImg.onerror = () => { qrImg.style.display = 'none'; };
-            qrImg.src = s.bank_qr_url;
-          } else {
-            qrImg.style.display = 'none';
-          }
-        };
-      } else {
-        qrImg.onerror = () => { qrImg.style.display = 'none'; };
-        qrImg.src = s.bank_qr_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80';
+        // Có bank_code -> tạo VietQR đúng số tiền và nội dung; nếu không dùng ảnh QR tĩnh
+        const qrImg = $('success-qr-img');
+        qrImg.style.display = '';
+        delete qrImg.dataset.fallbackApplied;
+        const staticQr = isSafeUrl(s.bank_qr_url) ? s.bank_qr_url : '';
+        if (s.bank_code) {
+          qrImg.src = `https://img.vietqr.io/image/${encodeURIComponent(s.bank_code)}-${encodeURIComponent(acc)}-compact2.png`
+            + `?amount=${encodeURIComponent(Math.round(Number(order.total) || 0))}`
+            + `&addInfo=${encodeURIComponent(order.order_id)}`
+            + (holder ? `&accountName=${encodeURIComponent(holder)}` : '');
+          qrImg.onerror = () => {
+            if (staticQr && qrImg.src !== staticQr) {
+              qrImg.onerror = () => { qrImg.style.display = 'none'; };
+              qrImg.src = staticQr;
+            } else {
+              qrImg.style.display = 'none';
+            }
+          };
+        } else if (staticQr) {
+          qrImg.onerror = () => { qrImg.style.display = 'none'; };
+          qrImg.src = staticQr;
+        } else {
+          qrImg.style.display = 'none';
+        }
       }
 
+      this.sound.playBell();
       this.openModal('modal-success');
     }
 
@@ -1851,13 +1600,13 @@
 
     saveCart() {
       try {
-        localStorage.setItem('petit_four_cart', JSON.stringify(this.cart));
+        localStorage.setItem('tiem_banh_nha_lam_cart', JSON.stringify(this.cart));
       } catch (e) {}
     }
 
     loadCart() {
       try {
-        const saved = localStorage.getItem('petit_four_cart');
+        const saved = localStorage.getItem('tiem_banh_nha_lam_cart');
         const parsed = saved ? JSON.parse(saved) : [];
         return Array.isArray(parsed) ? parsed.filter((i) => i && i.product && i.product.id != null) : [];
       } catch (e) {
@@ -1866,13 +1615,17 @@
     }
 
     updateCartUI() {
-      const count = this.cart.reduce((acc, i) => acc + i.quantity, 0);
-      ['cart-counter', 'bar-cart-counter'].forEach((id) => {
+      const count = this.cartCount();
+      const total = this.cartSubtotal();
+      ['cart-counter', 'bk-cart-counter'].forEach((id) => {
         const badge = $(id);
         if (badge) badge.textContent = count;
       });
-      const barBadge = $('bar-cart-counter');
-      if (barBadge) barBadge.style.display = count > 0 ? 'inline-flex' : 'none';
+      const pill = $('cart-pill');
+      pill.classList.toggle('show', count > 0);
+      $('pill-count').textContent = count;
+      $('pill-total').textContent = fmt(total);
+      if (this.book) this.book.refreshOrderPage();
     }
 
     // --- MODAL HELPERS ---
@@ -1890,7 +1643,7 @@
       const el = $(id);
       if (!el) return;
       el.classList.remove('open');
-      if (!this.isAnyModalOpen()) {
+      if (!this.isAnyModalOpen() && !this.book.isOpen) {
         document.body.classList.remove('modal-open');
         if (this.lastFocus && this.lastFocus.focus) this.lastFocus.focus({ preventScroll: true });
       }
